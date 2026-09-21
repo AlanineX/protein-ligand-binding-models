@@ -1,0 +1,5 @@
+label,model,param,value,unit,is_kd
+demo_two_site,sequential_specific,S,2,,0
+demo_two_site,sequential_specific,N,0,,0
+demo_two_site,sequential_specific,Ks_1,5,uM,1
+demo_two_site,sequential_specific,Ks_2,20,uM,1

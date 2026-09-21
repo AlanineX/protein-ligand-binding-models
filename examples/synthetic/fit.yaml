@@ -1,0 +1,17 @@
+defaults:
+  models: [sequential_specific]
+  input_unit: uM
+  output_unit: uM
+  p_total_val: 1
+  p_total_unit: uM
+  s: 2
+  s_mode: fixed
+  min_species_frac: 0
+  summary_enable: false
+  save_plots: false
+  debug_validate: false
+systems:
+  - name: synthetic_two_site
+    base_dir: .
+    data_path: titration.csv
+    out_fmt: output_demo

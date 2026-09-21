@@ -1,0 +1,6 @@
+include LICENSE
+include examples/synthetic/titration.csv
+include examples/synthetic/parameters.csv
+include examples/synthetic/fit.yaml
+include examples/synthetic/BRIEFING.md
+recursive-include checks *.py
