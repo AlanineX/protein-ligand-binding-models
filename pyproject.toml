@@ -16,11 +16,5 @@ classifiers = ["Programming Language :: Python :: 3", "Operating System :: OS In
 protein-ligand-fit = "scripts_binding.core.runner:main"
 protein-ligand-simulate = "scripts_binding.scripts.simulate:main"
 
-[project.optional-dependencies]
-test = ["pytest>=8", "build>=1"]
-
 [tool.setuptools.packages.find]
 include = ["scripts_binding*"]
-
-[tool.pytest.ini_options]
-testpaths = ["tests"]

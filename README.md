@@ -10,7 +10,7 @@ Python 3.10 or newer is required. From this repository directory:
 python -m venv .venv
 # Linux/macOS: source .venv/bin/activate
 # Windows PowerShell: .venv\Scripts\Activate.ps1
-python -m pip install -e '.[test]'
+python -m pip install -e .
 protein-ligand-fit examples/synthetic/fit.yaml
 ```
 
@@ -41,7 +41,7 @@ The registry includes sequential specific, sequential adduct, competing adduct, 
 ## Development
 
 ```bash
-python -m pytest -q
+python -m pip install build
 python -m build
 ```
 

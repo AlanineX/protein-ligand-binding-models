@@ -4,4 +4,3 @@ include examples/synthetic/parameters.csv
 include examples/synthetic/fit.yaml
 include examples/synthetic/BRIEFING.md
 include docs/images/synthetic_two_site_fit.png
-recursive-include checks *.py
