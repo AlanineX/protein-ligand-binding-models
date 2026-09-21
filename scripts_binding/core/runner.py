@@ -204,6 +204,8 @@ def run_all(yaml_path):
 
 
 def main():
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(errors="backslashreplace")
     parser = argparse.ArgumentParser(description="Fit protein-ligand binding distributions")
     parser.add_argument("config", help="YAML configuration file")
     args = parser.parse_args()

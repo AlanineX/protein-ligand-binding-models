@@ -1,6 +1,7 @@
 """Run the existing numerical recovery and paper regression checks."""
 
 from pathlib import Path
+import os
 import subprocess
 import sys
 
@@ -21,5 +22,6 @@ def test_scientific_check(name):
     result = subprocess.run(
         [sys.executable, str(root / "checks" / f"test_{name}.py")],
         cwd=root, capture_output=True, text=True,
+        env={**os.environ, "PYTHONIOENCODING": "utf-8"},
     )
     assert result.returncode == 0, result.stdout + result.stderr

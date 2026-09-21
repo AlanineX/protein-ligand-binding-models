@@ -28,6 +28,7 @@ Usage:
 import argparse
 import os
 import re
+import sys
 
 import numpy as np
 import pandas as pd
@@ -128,6 +129,8 @@ def _parse_args():
 
 
 def main():
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(errors="backslashreplace")
     args = _parse_args()
     os.makedirs(args.out_dir, exist_ok=True)
     cfg = RunConfig(input_unit="M", output_unit=args.ligand_unit,
