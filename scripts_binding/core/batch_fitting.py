@@ -6,6 +6,7 @@ import pandas as pd
 
 from scripts_binding.models import REGISTRY
 from scripts_binding.models.metadata import (
+    base_model_name,
     display_model_name,
     normalize_model_name,
     parameter_values_from_optimizer,
@@ -81,10 +82,10 @@ def _fit_job(args):
     """One (buffer, temp, rep, model) fit; safe to run in a worker process."""
     (buffer_name, csv_path, S, N, T, R, model_name,
      p_tot, n_boot, boot_seed) = args
-    model_name = normalize_model_name(model_name, S)
+    model_name = normalize_model_name(model_name)
     try:
         L_totals, F_exps = _load_titration(csv_path)
-        model = REGISTRY[model_name]
+        model = REGISTRY[base_model_name(model_name)]
         res, ssr, bic_v, rank_eff, rank_full = fit_one(
             model, L_totals, F_exps, p_tot, S, N
         )

@@ -1,17 +1,4 @@
-"""Van't Hoff thermodynamic analysis (linear and non-linear).
-
-Free parameters are the natural thermodynamic constants ΔH and ΔS (and ΔCp
-under NLVH), referenced to T0 = 298.15 K. ΔG and ΔG-derived quantities are
-computed from the fitted parameters via ΔG(T0) = ΔH(T0) - T0·ΔS(T0); the
-intercept lnK_0 is a derived quantity, not a free parameter.
-
-Provides:
-    statistical_correction  - macroscopic Kd(uM) -> ln(Ka_intrinsic)
-    lvh_equation            - linear VH model (2 params: ΔH, ΔS)
-    nlvh_equation           - non-linear VH model (3 params: ΔH, ΔS, ΔCp at T0)
-    fit_lvh                 - linear VH curve-fit wrapper
-    fit_nlvh                - NLVH curve-fit wrapper
-"""
+"""Linear and nonlinear van't Hoff fitting with derived thermodynamics."""
 
 import numpy as np
 from scipy.optimize import curve_fit
@@ -24,24 +11,9 @@ R_KJ = 8.3144598e-3  # kJ / (mol K)  — CODATA 2014
 # ---------------------------------------------------------------------------
 
 def statistical_correction(kd_uM, n_sites):
-    """
-    Convert an array of macroscopic sequential Kd values (uM) into
-    ln(Ka_intrinsic) values for N equivalent independent binding sites.
+    """Convert sequential Kd (µM) to intrinsic lnKa for equivalent sites.
 
-    Ka_intrinsic,i = Ka_macro,i * i / (N - i + 1)
-                   = [1 / (Kd_i * 1e-6)] * i / (N - i + 1)
-
-    Parameters
-    ----------
-    kd_uM : array-like, shape (n_sites,)
-        Macroscopic Kd values in micro-molar.
-    n_sites : int
-        Total number of equivalent independent sites N.
-
-    Returns
-    -------
-    ln_ka : ndarray, shape (n_sites,)
-        ln(Ka_intrinsic) for each sequential binding event.
+    Each step multiplies macroscopic Ka by i / (N - i + 1).
     """
     N = n_sites
     kd = np.asarray(kd_uM, dtype=float)
@@ -65,19 +37,7 @@ def statistical_correction(kd_uM, n_sites):
 # ---------------------------------------------------------------------------
 
 def lvh_equation(T, dH, dS):
-    """
-    Linear van't Hoff equation (ΔCp = 0):
-
-        ln K(T) = ΔS / R  -  ΔH / (R T)
-
-    Equivalently: ΔG(T) = ΔH - T ΔS, ln K = -ΔG/(RT).
-
-    Parameters
-    ----------
-    T  : temperature (K), scalar or array
-    dH : enthalpy (kJ/mol), constant with temperature
-    dS : entropy (kJ/mol/K), constant with temperature
-    """
+    """Evaluate lnKa at temperature T with constant enthalpy and entropy."""
     return dS / R_KJ - dH / (R_KJ * T)
 
 
@@ -86,25 +46,7 @@ def lvh_equation(T, dH, dS):
 # ---------------------------------------------------------------------------
 
 def nlvh_equation(T, dH, dS, Cp, T0):
-    """
-    Non-linear van't Hoff equation (ΔCp ≠ 0):
-
-        ΔH(T)   = ΔH(T0) + ΔCp · (T - T0)
-        ΔS(T)   = ΔS(T0) + ΔCp · ln(T / T0)
-        ΔG(T)   = ΔH(T) - T · ΔS(T)
-        ln K(T) = -ΔG(T) / (R T)
-
-    ΔH, ΔS are the free parameters at the reference T0; ΔCp parameterises
-    their temperature dependence.
-
-    Parameters
-    ----------
-    T  : temperature (K), scalar or array
-    dH : enthalpy at T0 (kJ/mol)
-    dS : entropy at T0 (kJ/mol/K)
-    Cp : heat-capacity change (kJ/mol/K)
-    T0 : reference temperature (K)
-    """
+    """Evaluate lnKa at T with constant heat-capacity change."""
     T = np.asarray(T, dtype=float)
     dH_T = dH + Cp * (T - T0)
     dS_T = dS + Cp * np.log(T / T0)
@@ -117,20 +59,7 @@ def nlvh_equation(T, dH, dS, Cp, T0):
 # ---------------------------------------------------------------------------
 
 def _derived_at_T0(dH, dS, T0, var_dH, var_dS, cov_dH_dS):
-    """Derive ΔG, -TΔS, lnK_0, Kd_uM at T0 with full covariance propagation.
-
-    At T = T0 the curvature term ΔCp drops out (ΔH(T0) = ΔH, ΔS(T0) = ΔS),
-    so ΔG(T0) = ΔH - T0·ΔS depends only on dH and dS. The same propagation
-    therefore serves LVH and NLVH.
-
-        var(ΔG)  = var(dH) + T0² var(dS) - 2 T0 cov(dH, dS)
-        σ(-TΔS)  = T0 · σ(dS)     [-TΔS = -T0·dS at T0]
-        var(lnK0) = var(dH)/(R T0)² + var(dS)/R² - 2 cov(dH, dS) / (R² T0)
-
-    Returns
-    -------
-    dict with: dG, e_dG, minus_TdS, e_minus_TdS, lnK0, e_lnK0, Kd_uM
-    """
+    """Derive reference-temperature quantities and propagate covariance."""
     dG = dH - T0 * dS
     var_dG = var_dH + (T0 ** 2) * var_dS - 2.0 * T0 * cov_dH_dS
     e_dG = np.sqrt(var_dG) if var_dG >= 0 else float("nan")
@@ -183,25 +112,9 @@ def _gof_metrics(y_obs, y_pred, lnKa_err, k):
 # ---------------------------------------------------------------------------
 
 def fit_lvh(T_arr, lnKa_arr, lnKa_err, T0):
-    """
-    Fit the linear van't Hoff equation (ΔCp = 0) to ln(Ka) data.
+    """Fit enthalpy and entropy to lnKa; temperatures are in kelvin.
 
-    Free parameters: ΔH, ΔS. ln K_0 (the value at T0) and ΔG(T0) are
-    derived, not fitted. See module docstring for the rationale.
-
-    Parameters
-    ----------
-    T_arr     : 1-D array of temperatures (K)
-    lnKa_arr  : 1-D array of mean ln(Ka) values
-    lnKa_err  : 1-D array of std-err of ln(Ka) (may contain 0 or NaN)
-    T0        : reference temperature (K)
-
-    Returns
-    -------
-    dict with keys: dH, e_dH, dS, e_dS, Cp, e_Cp,
-                    dG, e_dG, minus_TdS, e_minus_TdS,
-                    Kd_uM, lnK0, e_lnK0,
-                    R2, chi2, BIC, AICc, k_params, T0, lnKa_pred
+    Reference-temperature free energy and Kd are derived from the fit.
     """
     # Initial guesses: ΔH = -10 kJ/mol, then ΔS chosen to match observed
     # rep mean at T0 (lnK0_init).
@@ -245,21 +158,9 @@ def fit_lvh(T_arr, lnKa_arr, lnKa_err, T0):
 
 
 def fit_nlvh(T_arr, lnKa_arr, lnKa_err, T0):
-    """
-    Fit the NLVH equation to temperature-dependent ln(Ka) data.
+    """Fit enthalpy, entropy, and heat-capacity change to lnKa.
 
-    Free parameters: ΔH, ΔS at T0, and ΔCp. ΔG(T0) and lnK_0 are derived.
-
-    Parameters
-    ----------
-    T_arr     : 1-D array of temperatures (K)
-    lnKa_arr  : 1-D array of mean ln(Ka) values
-    lnKa_err  : 1-D array of std-err of ln(Ka) (may contain 0 or NaN)
-    T0        : reference temperature (K)
-
-    Returns
-    -------
-    dict with same keys as fit_lvh plus a fitted Cp, e_Cp.
+    Temperatures are in kelvin; reference-temperature quantities are derived.
     """
     if T0 in T_arr:
         lnK0_init = lnKa_arr[T_arr == T0][0]

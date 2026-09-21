@@ -536,7 +536,7 @@ def auto_select_S(data_path, cfg, model_name):
 
 def _resolve_S_N(cfg, model_name, max_i, S_override):
     """Effective (S, N) from config + data width."""
-    model_name = normalize_model_name(model_name, S_override)
+    model_name = normalize_model_name(model_name)
     model_s_overrides = getattr(cfg, "model_s_overrides", {}) or {}
     model_n_overrides = getattr(cfg, "model_n_overrides", {}) or {}
 
@@ -545,10 +545,10 @@ def _resolve_S_N(cfg, model_name, max_i, S_override):
             S_eff = int(S_override)
         elif model_name in model_s_overrides:
             S_eff = int(model_s_overrides[model_name])
-        elif model_name == "sequential_specific":
-            S_eff = max_i
         elif re.fullmatch(r"sequential_specific_s\d+", model_name):
             S_eff = int(model_name.rsplit("s", 1)[1])
+        elif cfg.s_mode.lower() == "auto":
+            S_eff = max_i
         else:
             S_eff = int(cfg.s)
         if S_eff > max_i:
@@ -687,7 +687,7 @@ def fit_file(data_path, out_dir, cfg, model_name, S_override=None):
 
     The returned dict contains all arrays needed by plot_fit_results().
     """
-    model_name = normalize_model_name(model_name, S_override)
+    model_name = normalize_model_name(model_name)
     model = REGISTRY[base_model_name(model_name)]
     is_specific = is_sequential_specific_model(model_name)
 

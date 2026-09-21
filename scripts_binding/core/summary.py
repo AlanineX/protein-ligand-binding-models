@@ -10,6 +10,7 @@ import matplotlib.pyplot as plt
 
 from ..models import REGISTRY, deconvolve_terms
 from ..models.metadata import (
+    DEFAULT_NSB_MODELS,
     base_model_name,
     display_model_name,
     is_dimensionless_param,
@@ -390,14 +391,20 @@ def _build_fit_parameters(per_model_results, cfg):
     return df
 
 
+def _same_ftest_support(reduced, full):
+    """Require the same site count and measured cells for a nested F-test."""
+    return (
+        reduced["S_eff"] == full["S_eff"]
+        and np.array_equal(reduced["L_totals_M"], full["L_totals_M"])
+        and reduced["F_exps"].shape == full["F_exps"].shape
+        and np.array_equal(np.isfinite(reduced["F_exps"]), np.isfinite(full["F_exps"]))
+    )
+
+
 def _build_nested_ftests(per_model_results, cfg):
     rows = []
-    reference = getattr(cfg, "reference_model", "sequential_specific_s7")
+    reference = getattr(cfg, "reference_model", "sequential_specific")
     nested = set(getattr(cfg, "nested_ftest_models", []) or [])
-    if reference == "sequential_specific_s7":
-        for apparent_model in ("sequential_specific_s9", "sequential_specific_s10"):
-            if apparent_model in per_model_results:
-                nested.add(apparent_model)
     if reference not in per_model_results:
         return pd.DataFrame(columns=[
             "analyte", "buffer", "temperature_C", "replicate_id",
@@ -408,13 +415,15 @@ def _build_nested_ftests(per_model_results, cfg):
         ])
     ref_by_file = {d["stem"]: d for d in per_model_results[reference]}
     for full_model in nested:
-        if full_model not in per_model_results:
+        if full_model not in DEFAULT_NSB_MODELS or full_model not in per_model_results:
             continue
         for full in per_model_results[full_model]:
             red = ref_by_file.get(full["stem"])
             if red is None:
                 continue
-            n_used = min(red["n_obs"], full["n_obs"])
+            if not _same_ftest_support(red, full):
+                continue
+            n_used = red["n_obs"]
             F, df1, df2, p = _extra_sum_squares_ftest(
                 red["SSR"], red["n_params"], full["SSR"], full["n_params"], n_used
             )
@@ -579,7 +588,7 @@ def _build_model_summary_sheet(fit_metrics, fit_parameters, nested_ftests, cfg):
             values_by_model[model_name] = _format_summary_value(sub[col])
         add_row(label, values_by_model)
 
-    reference_model = getattr(cfg, "reference_model", "sequential_specific_s7")
+    reference_model = getattr(cfg, "reference_model", "sequential_specific")
     if not nested_ftests.empty:
         for label, col in [
             (f"F vs {display_model_name(reference_model, getattr(cfg, 'model_display_names', {}))}", "F_value"),
@@ -859,7 +868,7 @@ def _write_summary_report(out_dir, fit_metrics, fit_parameters, nested_ftests, c
             "$K_{d,n}$-weaker-than-specific constraint.",
         ])
 
-    reference = getattr(cfg, "reference_model", "sequential_specific_s7")
+    reference = getattr(cfg, "reference_model", "sequential_specific")
     valid_ftest_models = (
         nested_ftests["full_model_name"].dropna().drop_duplicates().tolist()
         if not nested_ftests.empty else []
@@ -872,7 +881,7 @@ def _write_summary_report(out_dir, fit_metrics, fit_parameters, nested_ftests, c
         elif model_name in valid_ftest_models:
             continue
         else:
-            reason = "not a valid nested extension of canonical reference"
+            reason = "not a configured nested extension of the reference"
         non_nested.append({"model_name": _display(model_name), "excluded_from_ftest_reason": reason})
     non_nested_df = pd.DataFrame(non_nested)
 
@@ -1032,7 +1041,7 @@ def compare_models_bic_aic(per_model_results, out_dir, cfg=None):
     """Write model-comparison outputs for independently fitted replicates.
 
     The broad model set is compared with per-replicate SSR, AICc, and BIC.
-    Nested F-tests are restricted to the configured canonical reference model
+    Nested F-tests are restricted to the configured reference model
     versus configured NSB models and are reported per replicate; p-values are
     not averaged across replicates.
     """
@@ -1058,7 +1067,7 @@ def compare_models_bic_aic(per_model_results, out_dir, cfg=None):
         p = float(_f_dist.sf(F, df1, df2)) if F > 0 else 1.0
         return F, df1, df2, p
 
-    reference_model = getattr(cfg, "reference_model", "sequential_specific_s7")
+    reference_model = getattr(cfg, "reference_model", "sequential_specific")
     nested_ftest_models = set(getattr(cfg, "nested_ftest_models", []) or [])
     ftest_alpha = float(getattr(cfg, "ftest_alpha", 0.05))
     output_unit = getattr(cfg, "output_unit", "")
@@ -1236,7 +1245,7 @@ def compare_models_bic_aic(per_model_results, out_dir, cfg=None):
     summ_path = os.path.join(out_dir, "model_comparison_summary.csv")
     df_summ.to_csv(summ_path, index=False, float_format="%.6e")
 
-    # --- focused nested F-tests: canonical reference vs allowed NSB candidates ---
+    # --- focused nested F-tests: configured reference vs allowed NSB candidates ---
     ft_rows = []
     excluded_rows = []
     if reference_model in per_model_results:
@@ -1244,7 +1253,7 @@ def compare_models_bic_aic(per_model_results, out_dir, cfg=None):
         for full_model in model_names:
             if full_model == reference_model:
                 continue
-            if full_model not in nested_ftest_models:
+            if full_model not in nested_ftest_models or full_model not in DEFAULT_NSB_MODELS:
                 excluded_rows.append({
                     "Model": full_model,
                     "Reference": reference_model,
@@ -1261,7 +1270,15 @@ def compare_models_bic_aic(per_model_results, out_dir, cfg=None):
                         "Reason": "matching_reference_replicate_not_found",
                     })
                     continue
-                n_used = min(red["n_obs"], full["n_obs"])
+                if not _same_ftest_support(red, full):
+                    excluded_rows.append({
+                        "Model": full_model,
+                        "Reference": reference_model,
+                        "File": full["stem"],
+                        "Reason": "different_site_count_or_observation_support",
+                    })
+                    continue
+                n_used = red["n_obs"]
                 F, df1, df2, p = _ftest(
                     red["SSR"], red["n_params"], full["SSR"], full["n_params"], n_used
                 )
@@ -1269,7 +1286,7 @@ def compare_models_bic_aic(per_model_results, out_dir, cfg=None):
                     "File": full["stem"],
                     "reduced_model": reference_model,
                     "full_model": full_model,
-                    "question": "does_explicit_NSB_improve_fit_relative_to_S7_SB",
+                    "question": "does_explicit_NSB_improve_fit_relative_to_reference",
                     "S_reduced": red.get("S_eff", np.nan),
                     "N_reduced": red.get("N_eff", np.nan),
                     "S_full": full.get("S_eff", np.nan),
@@ -1323,7 +1340,7 @@ def compare_models_bic_aic(per_model_results, out_dir, cfg=None):
         excluded_model = excluded.get("Model")
         if excluded_model in tested_models:
             continue
-        if model_role(excluded_model) != "canonical_s7_nsb_candidate":
+        if model_role(excluded_model) != "adduct_candidate":
             continue
         ft_summary_rows.append({
             "full_model": excluded_model,
@@ -1337,7 +1354,7 @@ def compare_models_bic_aic(per_model_results, out_dir, cfg=None):
             "p_min": np.nan,
             "p_median": np.nan,
             "p_max": np.nan,
-            "note": "not a configured nested reduction to the S=7 sequential reference; compare by AICc/BIC",
+            "note": "not a configured nested reduction to the reference; compare by AICc/BIC",
         })
     ft_summary_path = os.path.join(out_dir, "reference_nsb_ftest_summary.csv")
     pd.DataFrame(ft_summary_rows).to_csv(ft_summary_path, index=False, float_format="%.6e")

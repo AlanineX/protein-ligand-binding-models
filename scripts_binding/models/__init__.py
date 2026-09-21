@@ -1,4 +1,4 @@
-"""Binding-model registry. See MODELS.md for the uniform interface + per-model math."""
+"""Binding-model registry."""
 
 from . import competing_adduct
 from . import occupancy_decay
@@ -10,9 +10,6 @@ from . import stochastic_adduct
 
 REGISTRY = {
     sequential_specific.MODEL_NAME: sequential_specific,
-    "sequential_specific_s7": sequential_specific,
-    "sequential_specific_s9": sequential_specific,
-    "sequential_specific_s10": sequential_specific,
     sequential_adduct.MODEL_NAME: sequential_adduct,
     competing_adduct.MODEL_NAME: competing_adduct,
     stochastic_adduct.MODEL_NAME: stochastic_adduct,

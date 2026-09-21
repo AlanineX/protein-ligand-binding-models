@@ -1,14 +1,4 @@
-"""Unified thermodynamic-analysis pipeline.
-
-Replaces the legacy run.py + full_test.py + sweep.py triad with one
-long-format-CSV-producing function. The output matches the convention
-used by scripts_binding/scripts/batch_kd_scan.py (one row per
-`(dataset, site, N, method, replicate)`) so aggregations are uniform
-across Kd- and thermodynamics-side analyses.
-
-`run_analysis` does one file × one N × one method.
-`run_grid` iterates over (dataset, N values, methods) and concatenates.
-"""
+"""Thermodynamic fits from temperature-dependent Kd tables."""
 import os
 from pathlib import Path
 from itertools import product
@@ -106,32 +96,7 @@ def _g4(x):
 
 
 def run_analysis(data, N, method, ref_temp_C=25.0, error_mode="covariance"):
-    """Fit thermodynamics for one loaded-and-reordered dataset × N × method.
-
-    Returns a list of dicts (long format: one row per (site, replicate) plus
-    one 'mean-fit' row per site with replicate='mean').
-
-    Parameters
-    ----------
-    data        dict returned by `load_kd_csv` then `_reorder_sites_kn_last`.
-    N           integer for the Wyman-Gill statistical correction.
-    method      'nlvh' (3 params: ΔH, ΔS, ΔCp) or 'lvh' (2 params: ΔH, ΔS;
-                ΔCp ≡ 0 by construction).
-    ref_temp_C  reference T for reporting dG (default 25 °C).
-    error_mode  How the mean-row error bars are computed:
-                - 'covariance' (default): σ from the weighted regression's
-                  covariance matrix. Uses all 21 data points, propagates
-                  cov(ΔH, ΔS) through the delta method to σ(ΔG), σ(-TΔS).
-                - 'replicate': σ = SD / √n_reps across the per-replicate
-                  fit values for ΔH, ΔS, ΔCp, ΔG, -TΔS. Captures replicate
-                  reproducibility honestly but with only df = n_reps − 1.
-                - 'sd': σ = plain SD across the per-replicate fit values
-                  (same as 'replicate' without the √n_reps divisor). Matches
-                  the per-rep avg±SD reporting used elsewhere in the project.
-                Both modes use the SAME fit (weighted on the rep mean); only
-                the e_* fields written to the mean row differ. The choice
-                applies uniformly to LVH and NLVH within the same run.
-    """
+    """Fit one dataset and return long-format site and replicate results."""
     data, kn_col = _reorder_sites_kn_last(data)
     T0 = ref_temp_C + 273.15
     fit_func = fit_lvh if method == "lvh" else fit_nlvh

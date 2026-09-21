@@ -1,22 +1,4 @@
-"""Replicate-weighted Kd fitting.
-
-Pools N replicate titration spectra (raw F_i(L) data) at one (buffer,
-temperature) into mean F_i(L) and standard error of the mean SE/√n_reps
-per (L, i) cell, then runs a single weighted least-squares fit of the
-chosen partition-function model to the pooled mean spectrum.
-
-The output is one Kd per pocket (plus K_n where applicable) with
-σ(Kd) from the Jacobian of the weighted residuals under the
-absolute_sigma=True convention (i.e. SE/√n_reps is treated as the
-true noise estimate, not as relative weights).
-
-This is the spectrum-level analogue of the thermodynamics 'covariance'
-mode: replicate variance enters as the input weight to a single fit
-rather than as a post-hoc aggregation of per-rep fits.
-
-Module API:
-    fit_replicates_weighted(rep_csv_paths, model_name, cfg, S_override) -> dict
-"""
+"""Weighted fitting of pooled replicate bound-state fractions."""
 from __future__ import annotations
 from pathlib import Path
 
@@ -24,7 +6,7 @@ import numpy as np
 from scipy.optimize import least_squares
 
 from ..models import REGISTRY
-from ..models.metadata import is_dimensionless_param, is_sequential_specific_model, ka_kd_from_optimizer
+from ..models.metadata import base_model_name, is_dimensionless_param, is_sequential_specific_model, ka_kd_from_optimizer
 from .fitting import (
     load_binding_csv, _param_bounds, _resolve_S_N, _trim_low_pop_species,
     _nan_pad, _constrain_nsb_for_model, _NsbWeakerThanSpecificTransform,
@@ -75,18 +57,7 @@ def _project_rep_onto_union(L_rep, F_rep, L_union, num_species, atol_M=1e-9):
 
 
 def _pool_replicates(rep_csv_paths, cfg, model_name, S_override=None):
-    """Load N replicate titration CSVs and pool onto the union L grid.
-
-    Replicates can use different concentration grids; the union grid is
-    built across all reps. At each (L, species) cell we compute mean F
-    and SE = SD/√n_valid_reps, where n_valid_reps is the count of reps
-    that actually measured that cell. Cells with < 2 valid reps have NaN
-    SE; the weighted residual masks them to zero weight.
-
-    Returns
-    -------
-    (L_union, F_mean, F_se, num_species_model, S_eff, N_eff, n_reps)
-    """
+    """Pool measurements on their observed concentration grid and compute means and SEs."""
     rep_data = []
     for path in rep_csv_paths:
         df, L_totals_M, I_cols, F_exps = load_binding_csv(path, cfg)
@@ -154,41 +125,8 @@ def _weighted_residual(ln_params, L_totals, P_tot, F_mean, F_se, model, S, N,
 
 
 def fit_replicates_weighted(rep_csv_paths, model_name, cfg, S_override=None):
-    """Pool N replicate titrations and produce one weighted Kd fit.
-
-    Parameters
-    ----------
-    rep_csv_paths : list[str | Path]
-        Paths to N replicate titration CSVs at the same (buffer, temperature).
-        Concentration grids must be identical (within rtol=1e-4).
-    model_name    : str
-        Key into scripts_binding.models.REGISTRY.
-    cfg           : config object
-        Same shape as `core.config.PlotConfig`-like; used for `p_total_m`,
-        `min_species_frac`, `s`, `n_override`, `auto_adjust_s`,
-        `scale_l_in_to_m`, `scale_m_to_out`.
-    S_override    : int | None
-        Override `cfg.s`. None → use cfg.s.
-
-    Returns
-    -------
-    dict with keys:
-        param_names : list[str]              parameter labels for the model
-        Kd_uM       : np.ndarray             fitted Kd per parameter, in μM
-        e_Kd_uM     : np.ndarray | None      σ(Kd) in μM via Jacobian (None
-                                             if J^T J is singular)
-        Ka_M_inv    : np.ndarray             1/Kd_uM × 1e6 = Ka in M^-1
-        e_Ka_M_inv  : np.ndarray | None      σ(Ka) via Jacobian
-        lnK_opt     : np.ndarray             fitted ln(Ka) vector
-        e_lnK       : np.ndarray | None      σ(ln Ka) from sqrt(diag(cov))
-        cov_lnK     : np.ndarray | None      full lnKa covariance
-        chi2        : float                  weighted SSR at the optimum
-        n_obs       : int                    valid (non-zero-weight) cells
-        n_params    : int                    number of fitted parameters
-        S_eff, N_eff, n_reps                 : ints
-        L_totals_M, F_mean, F_se             : pooled inputs (for plotting)
-    """
-    model = REGISTRY[model_name]
+    """Fit one weighted model to pooled replicate fractions."""
+    model = REGISTRY[base_model_name(model_name)]
 
     L_ref, F_mean, F_se, num_species_model, S_eff, N_eff, n_reps = (
         _pool_replicates(rep_csv_paths, cfg, model_name, S_override)

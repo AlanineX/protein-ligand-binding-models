@@ -1,21 +1,4 @@
-"""Parse Kd CSV files from native mass spectrometry experiments.
-
-Two input formats are supported:
-
-1. **Replicate format (legacy).** Multiple rows per temperature, each row
-   carrying one replicate's Kd ladder. Columns: `Temp_C, Replicate,
-   K1(uM), K2(uM), ..., Kₙ(uM)`. The thermodynamics pipeline computes
-   the per-temperature mean and SE/√n_reps from the replicate spread.
-
-2. **Replicate-weighted format.** One row per temperature, Kd plus
-   paired uncertainty: `Temp_C, Replicate, K1(uM), e_K1(uM), K2(uM),
-   e_K2(uM), ...`. The σ_Kd values come from an upstream weighted fit
-   that pooled the raw species-fraction replicates (see
-   `core.replicate_fitting`). The thermodynamics pipeline uses the
-   provided σ_Kd directly as the lnKa weight; no rep aggregation.
-
-The format is auto-detected from the column headers.
-"""
+"""Load replicate or uncertainty-weighted Kd temperature-series CSVs."""
 
 import csv
 import numpy as np
@@ -39,20 +22,7 @@ def _is_kd_header(h):
 
 
 def load_kd_csv(filepath):
-    """
-    Load a Kd CSV file. Auto-detects replicate vs weighted format.
-
-    Returns dict:
-        temperatures      - sorted list of unique temperatures (C)
-        n_sites           - number of binding sites N (Kd columns)
-        kd_data           - dict[temp_C] -> list of 1-D arrays (one per row)
-        kd_se_data        - dict[temp_C] -> list of 1-D σ arrays (None per cell
-                            in replicate format); same shape as kd_data
-        format            - 'replicate' or 'weighted'
-        site_labels       - list of Kd column headers
-        filepath          - Path object
-        warnings          - list of warning strings
-    """
+    """Parse Kd values and optional uncertainty columns by temperature and site."""
     filepath = Path(filepath).resolve()
     warnings = []
 

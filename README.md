@@ -30,6 +30,17 @@ Titration CSVs use `Entry` for total ligand concentration and `I0`, `I1`, etc. f
 
 Model families: sequential specific, sequential adduct, competing adduct, stochastic adduct, occupancy decay, and shared-site. Thermodynamic analysis code is included for temperature series. Check fit quality and parameter identifiability before biological interpretation.
 
+### Choose a site count
+
+Use the generic `sequential_specific` model for a new system. Set `s` to its proposed number of specific binding steps and `s_mode: manual` to fit that count. With `s_mode: auto`, the specific-only model uses the highest observed bound-state index; adduct models scan site counts by BIC. In manual mode, adduct models use `s` and infer additional slots from the CSV width unless `n_override` is set. Example:
+
+```yaml
+defaults:
+  models: [sequential_specific]
+  s: 5
+  s_mode: manual
+```
+
 ### Plot colors
 
 Set these YAML keys to Matplotlib colormap names such as `viridis`, `Greens`, or `Purples`:

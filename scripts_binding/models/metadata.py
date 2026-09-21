@@ -5,61 +5,16 @@ import re
 import numpy as np
 
 
-MODEL_SPECS = {
-    "sequential_specific": {
-        "display_name": "Sequential-specific",
-        "output_name": "sequential_specific",
-    },
-    "sequential_specific_s0": {
-        "display_name": "Sequential-specific null (S=0)",
-        "output_name": "sequential_specific_s0",
-    },
-    "sequential_specific_s7": {
-        "display_name": "Sequential-specific (S=7)",
-        "output_name": "sequential_specific_s7",
-    },
-    "sequential_specific_s9": {
-        "display_name": "Sequential-specific (S=9)",
-        "output_name": "sequential_specific_s9",
-    },
-    "sequential_specific_s10": {
-        "display_name": "Sequential-specific (S=10)",
-        "output_name": "sequential_specific_s10",
-    },
-    "sequential_adduct": {
-        "display_name": "Sequential-adduct",
-        "output_name": "sequential_adduct",
-    },
-    "competing_adduct": {
-        "display_name": "Competing-adduct",
-        "output_name": "competing_adduct",
-    },
-    "stochastic_adduct": {
-        "display_name": "Stochastic-adduct",
-        "output_name": "stochastic_adduct",
-    },
-    "occupancy_decay": {
-        "display_name": "Occupancy-decay",
-        "output_name": "occupancy_decay",
-    },
-    "shared_site": {
-        "display_name": "Shared-site",
-        "output_name": "shared_site",
-    },
+DISPLAY_MODEL_NAMES = {
+    "sequential_specific": "Sequential-specific",
+    "sequential_adduct": "Sequential-adduct",
+    "competing_adduct": "Competing-adduct",
+    "stochastic_adduct": "Stochastic-adduct",
+    "occupancy_decay": "Occupancy-decay",
+    "shared_site": "Shared-site",
 }
-
-CANONICAL_MODEL_NAMES = set(MODEL_SPECS)
-DISPLAY_MODEL_NAMES = {name: spec["display_name"] for name, spec in MODEL_SPECS.items()}
-DEFAULT_OUTPUT_MODEL_NAMES = {name: spec["output_name"] for name, spec in MODEL_SPECS.items()}
 
 DIMENSIONLESS_PARAMS = {"gamma"}
-
-SEQUENTIAL_SPECIFIC_IDENTIFIERS = {
-    "sequential_specific",
-    "sequential_specific_s7",
-    "sequential_specific_s9",
-    "sequential_specific_s10",
-}
 
 DEFAULT_NSB_MODELS = [
     "sequential_adduct",
@@ -69,37 +24,18 @@ DEFAULT_NSB_MODELS = [
     "shared_site",
 ]
 
-DEFAULT_BATCH_MODELS = list(DEFAULT_NSB_MODELS)
-
-DEFAULT_COMPARISON_MODELS = [
-    "sequential_specific_s7",
-    "sequential_specific_s9",
-    *DEFAULT_NSB_MODELS,
-]
-
-DEFAULT_NESTED_FTEST_MODELS = [
-    "sequential_specific_s9",
-    "sequential_specific_s10",
-    "sequential_adduct",
-    "competing_adduct",
-    "stochastic_adduct",
-    "occupancy_decay",
-]
-
-
-def normalize_model_name(model_name, s_override=None):
+def normalize_model_name(model_name):
     """Return the canonical identifier for a configured model name."""
     if model_name is None:
         return model_name
     return str(model_name)
 
 
-def canonicalize_model_list(model_names, s_overrides=None):
+def canonicalize_model_list(model_names):
     """Canonicalize a model-name list, preserving order and removing duplicates."""
-    s_overrides = s_overrides or {}
     out = []
     for name in model_names or []:
-        canonical = normalize_model_name(name, s_overrides.get(name))
+        canonical = normalize_model_name(name)
         if canonical not in out:
             out.append(canonical)
     return out
@@ -109,7 +45,7 @@ def canonicalize_override_map(mapping):
     """Canonicalize model-name keys in a per-model override dictionary."""
     out = {}
     for key, value in (mapping or {}).items():
-        canonical = normalize_model_name(key, value)
+        canonical = normalize_model_name(key)
         out[canonical] = value
     return out
 
@@ -131,27 +67,18 @@ def base_model_name(model_name):
 
 
 def is_sequential_specific_model(model_name):
-    """True for the sequential-specific implementation and S-specific identifiers."""
+    """True for the base model or any site-count identifier."""
     canonical = normalize_model_name(model_name)
-    return (
-        canonical in SEQUENTIAL_SPECIFIC_IDENTIFIERS
-        or bool(re.fullmatch(r"sequential_specific_s\d+", canonical))
-    )
+    return canonical == "sequential_specific" or bool(re.fullmatch(r"sequential_specific_s\d+", canonical))
 
 
 def model_role(model_name):
     """Human-readable role used in comparison outputs."""
     canonical = normalize_model_name(model_name)
-    if canonical == "sequential_specific_s0":
-        return "null_sequential_specific_baseline"
-    if canonical in {"sequential_specific_s9", "sequential_specific_s10"}:
-        return "apparent_sequential_specific_baseline"
-    if canonical == "sequential_specific_s7":
-        return "canonical_s7_reference"
+    if is_sequential_specific_model(canonical):
+        return "sequential_specific_baseline"
     if canonical in DEFAULT_NSB_MODELS:
-        return "canonical_s7_adduct_candidate"
-    if canonical == "sequential_specific":
-        return "sequential_specific"
+        return "adduct_candidate"
     return "candidate"
 
 
@@ -173,8 +100,7 @@ def output_model_name(model_name, overrides=None):
     """Return the configured filesystem-safe output name for a model."""
     canonical = normalize_model_name(model_name)
     overrides = configured_name_map(overrides)
-    default_name = DEFAULT_OUTPUT_MODEL_NAMES.get(canonical, canonical)
-    name = str(overrides.get(canonical, default_name))
+    name = str(overrides.get(canonical, canonical))
     name = re.sub(r"[^A-Za-z0-9_.-]+", "_", name.strip())
     return name.strip("._-") or canonical
 
@@ -253,7 +179,7 @@ def model_param_map(model_name, S):
     """
     model_name = raw_model_name(model_name)
     cols = ["Kn"] + [f"Ks_{k}" for k in range(1, S + 1)]
-    if model_name in SEQUENTIAL_SPECIFIC_IDENTIFIERS:
+    if is_sequential_specific_model(model_name):
         return {c: (None if c == "Kn" else c) for c in cols}
     if model_name in ("sequential_adduct", "stochastic_adduct"):
         return {c: c for c in cols}

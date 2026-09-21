@@ -1,17 +1,4 @@
-"""Guan 2015 Eq. 6 constant-NSB stepwise model, generalized to S specific sites.
-
-Original Guan formulation (S=1): K_app_k = K_s + β at k=1; K_app_k = β for k≥2.
-Generalized to multi-site S: K_app_k = K_s,k + β for k=1..S; K_app_k = β for k>S.
-
-Equivalent to occupancy_decay with γ = 0 (the power-law shape collapses to
-a constant NSB amplitude). This model is distinct from sequential_adduct
-(Shimon 2010), which has K_n appearing geometrically across bound states via
-the partition-function recursion.
-
-Companion to occupancy_decay (Guan Eq. 5); both ship in Guan's SI
-deconvKas_general_curveFit.py (mode=0 selects this constLaw form, mode=1
-the powerLaw). See MODELS.md §3.6.
-"""
+"""Stepwise specific binding with a constant nonspecific association term."""
 import numpy as np
 from scipy.optimize import brentq
 

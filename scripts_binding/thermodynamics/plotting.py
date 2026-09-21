@@ -214,26 +214,7 @@ def plot_vanthoff(
     show_errors=True,
     equilibrium_constant="Ka",
 ):
-    """Grid of per-site van't Hoff panels: y = ln(K), x = 1000/T.
-
-    ``equilibrium_constant`` controls whether the fitted association constants
-    are displayed as ln(Ka) or transformed to ln(Kd) = -ln(Ka). The fitted
-    thermodynamic parameters are unchanged.
-
-    One subplot per binding site, points + best-fit curve. When ≥2
-    replicates exist the y-error bar is the sample SD of ln(Ka) across the
-    replicates (ddof=1), matching the avg±SD reporting convention used in
-    the manuscript. When there is only one replicate per temperature (e.g.
-    weighted-format input, where the replicate SD is undefined), the bar
-    falls back to the propagated per-point fit standard error
-    σ(ln Ka) = σ_Kd / Kd — the same σ the weighted regression is weighted
-    by — and the legend is labelled accordingly. The sigma passed to the
-    weighted regression in pipeline.py::run_analysis remains that SE, which
-    is correct for fitting a per-temperature MEAN.
-
-    Both LVH and NLVH curves are drawn when available, with the requested
-    output method controlling only the file name and fallback row selection.
-    """
+    """Plot per-site lnKa or lnKd against inverse temperature."""
     cfg = cfg or PlotConfig()
     constant = str(equilibrium_constant).strip().lower()
     if constant not in {"ka", "kd"}:

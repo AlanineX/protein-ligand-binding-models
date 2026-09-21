@@ -1,30 +1,4 @@
-"""Forward simulation: given binding constants, produce mole-fraction curves.
-
-This is the inverse of the fitting pipeline — instead of fitting Kds to data, you
-supply Kds and get the predicted species curves. It reuses the *exact same* math
-and plotting as the fits, so there is no duplicated code:
-  - each model's `free_ligand` + `mole_fractions` (core math, from models.REGISTRY)
-  - `core.plotting.plot_species_curves` (the same curve plot used for fits)
-
-Input: a CSV of parameters (see sim_params_template.csv), long format, one row
-per parameter, grouped by `label` (one simulation per label):
-
-    label,model,param,value,unit,is_kd
-    groel_geometry,sequential_adduct,S,7,,0      # structural: # specific sites
-    groel_geometry,sequential_adduct,N,3,,0      # structural: # nonspecific slots
-    groel_geometry,sequential_adduct,Kn,400,uM,1 # Kd = 400 uM  (is_kd=1)
-    groel_geometry,sequential_adduct,Ks_1,6.89,uM,1
-    ...
-
-`param` names must match the model's param_labels (Kn / beta / gamma / Ks_i),
-plus the two structural rows S and N. K-type params take a Kd (is_kd=1, with a
-`unit`) or a Ka in M^-1 (is_kd=0); `gamma` is dimensionless (is_kd=0).
-
-Usage:
-    python -m scripts_binding.scripts.simulate \
-        --params sim_params_template.csv --out-dir results/simulations \
-        --p-tot 1.0 --p-tot-unit uM --ligand-max 300 --ligand-unit uM
-"""
+"""Forward-simulate bound-state curves from a parameter CSV."""
 import argparse
 import os
 import re
@@ -37,7 +11,7 @@ from scripts_binding.core.csv_io import read_csv
 from scripts_binding.models import REGISTRY
 from scripts_binding.core.config import RunConfig, UNIT_MAP
 from scripts_binding.core.plotting import setup_matplotlib, plot_species_curves
-from scripts_binding.models.metadata import normalize_model_name
+from scripts_binding.models.metadata import base_model_name, normalize_model_name
 
 
 def _to_ln(param, value, unit, is_kd):
@@ -75,8 +49,8 @@ def simulate_one(model_name, lnK, S, N, cfg, L_grid_M, tick_L_M, out_dir, label,
     The plot already *is* the curve; the per-point CSV (L_tot, L_free, I0..In)
     is the same data, so it is only written when `write_csv` is set.
     """
-    model_name = normalize_model_name(model_name, S)
-    model = REGISTRY[model_name]
+    model_name = normalize_model_name(model_name)
+    model = REGISTRY[base_model_name(model_name)]
     num_species = S + N + 1
 
     L_free = np.array([model.free_ligand(L, cfg.p_total_m, lnK, S, N) for L in L_grid_M])
@@ -157,12 +131,12 @@ def main():
             continue
         rows = df[df["label"] == label]
         model_name = normalize_model_name(rows["model"].iloc[0])
-        if model_name not in REGISTRY:
+        if base_model_name(model_name) not in REGISTRY:
             print(f"[simulate] {label}: unknown model '{model_name}' — skipped")
             failed.append(label)
             continue
         try:
-            lnK, S, N = _build_lnK(rows, REGISTRY[model_name])
+            lnK, S, N = _build_lnK(rows, REGISTRY[base_model_name(model_name)])
             svg, csv = simulate_one(model_name, lnK, S, N, cfg,
                                     L_grid_M, tick_L_M, args.out_dir, label,
                                     write_csv=args.csv,

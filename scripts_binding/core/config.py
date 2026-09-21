@@ -48,9 +48,8 @@ class RunConfig:
 
     # --- Models to run (names from models.REGISTRY) ---
     models: List[str] = field(default_factory=lambda: ["sequential_specific", "sequential_adduct"])
-    reference_model: str = "sequential_specific_s7"
+    reference_model: str = "sequential_specific"
     nested_ftest_models: List[str] = field(default_factory=lambda: [
-        "sequential_specific_s9",
         "sequential_adduct",
         "competing_adduct",
         "stochastic_adduct",
@@ -117,16 +116,9 @@ class RunConfig:
             name = getattr(self, key)
             if name is not None and name not in colormaps:
                 raise ValueError(f"Unknown Matplotlib colormap for {key}: {name}")
-        raw_s_overrides = dict(self.model_s_overrides or {})
-        self.models = canonicalize_model_list(self.models, raw_s_overrides)
-        self.reference_model = normalize_model_name(
-            self.reference_model,
-            raw_s_overrides.get(self.reference_model),
-        )
-        self.nested_ftest_models = canonicalize_model_list(
-            self.nested_ftest_models,
-            raw_s_overrides,
-        )
+        self.models = canonicalize_model_list(self.models)
+        self.reference_model = normalize_model_name(self.reference_model)
+        self.nested_ftest_models = canonicalize_model_list(self.nested_ftest_models)
         self.model_s_overrides = canonicalize_override_map(self.model_s_overrides)
         self.model_n_overrides = canonicalize_override_map(self.model_n_overrides)
         self.model_display_names = configured_name_map(self.model_display_names)
