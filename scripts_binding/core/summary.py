@@ -163,7 +163,7 @@ def build_deconv_summary(model_name, ref_L, F_exp_mean, F_exp_std, mean_lnK,
         contrib_all[idx] = contrib
         frac_within_all[idx] = frac_within
 
-    summary_stem = cfg.csv_name_wildcard.replace("*", "").replace(".csv", "")
+    summary_stem = os.path.basename(cfg.csv_name_wildcard).replace("*", "").replace(".csv", "")
     summary_deconv_svg = os.path.join(out_dir, summary_stem + "deconv_summary.svg")
     fig = plot_deconv_byconc(
         ref_L * cfg.scale_m_to_out, contrib_all, summary_S, summary_N,

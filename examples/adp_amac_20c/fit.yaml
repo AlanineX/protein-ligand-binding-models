@@ -15,6 +15,10 @@ defaults:
   deconv_enable: false
   debug_validate: false
   save_plots: true
+  colormap: Greens
+  # For composition plots, set deconv_enable: true and optionally use:
+  # specific_colormap: Greens
+  # nonspecific_colormap: Purples
 systems:
   - name: ADP_AmAc_20C
     base_dir: .

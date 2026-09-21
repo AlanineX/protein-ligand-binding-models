@@ -102,6 +102,8 @@ class RunConfig:
     max_image_dim: int = 1800
     base_fontsize: int = 20
     colormap: str = "PRGn"
+    specific_colormap: Optional[str] = None
+    nonspecific_colormap: Optional[str] = None
 
     # --- Derived (computed in __post_init__) ---
     scale_l_in_to_m: float = field(init=False, default=0.0)
@@ -110,6 +112,11 @@ class RunConfig:
     p_total_m: float = field(init=False, default=0.0)
 
     def __post_init__(self):
+        from matplotlib import colormaps
+        for key in ("colormap", "specific_colormap", "nonspecific_colormap"):
+            name = getattr(self, key)
+            if name is not None and name not in colormaps:
+                raise ValueError(f"Unknown Matplotlib colormap for {key}: {name}")
         raw_s_overrides = dict(self.model_s_overrides or {})
         self.models = canonicalize_model_list(self.models, raw_s_overrides)
         self.reference_model = normalize_model_name(

@@ -30,6 +30,18 @@ Titration CSVs use `Entry` for total ligand concentration and `I0`, `I1`, etc. f
 
 Model families: sequential specific, sequential adduct, competing adduct, stochastic adduct, occupancy decay, and shared-site. Thermodynamic analysis code is included for temperature series. Check fit quality and parameter identifiability before biological interpretation.
 
+### Plot colors
+
+Set these YAML keys to Matplotlib colormap names such as `viridis`, `Greens`, or `Purples`:
+
+| Key | Plot elements |
+|---|---|
+| `colormap` | All apparent bound-state curves; default for deconvolution components |
+| `specific_colormap` | Specific-only model curves and pure-specific deconvolution components |
+| `nonspecific_colormap` | Deconvolution components containing nonspecific binding |
+
+The default is `colormap: PRGn`; the AmAc example explicitly uses `Greens`. To use one map for everything, set only `colormap`. To use separate component maps, enable `deconv_enable: true` and set the two optional keys. Apparent peaks in adduct models can contain both binding types, so their fit curves use the overall `colormap`.
+
 ## Build
 
 ```bash

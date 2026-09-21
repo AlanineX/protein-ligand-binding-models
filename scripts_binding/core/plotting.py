@@ -54,6 +54,8 @@ class PlotConfig:
     summary_show_calc_shade: bool = True
     subplot_box_aspect: float = 1.0 / GOLDEN  # plot-area h/w; elongated ~0.45
     colormap: str = "PRGn"
+    specific_colormap: str | None = None
+    nonspecific_colormap: str | None = None
 
 
 def setup_matplotlib(cfg):
@@ -132,16 +134,6 @@ def _diverging_colors(n, cmap_name='PRGn'):
     return colors
 
 
-def _condition_cmap_name(cfg):
-    """Condition palette inferred from the data folder: AMAC=green, EDDA=purple."""
-    base_dir = getattr(cfg, "base_dir", "").lower()
-    if "amac" in base_dir:
-        return "Greens"
-    if "edda" in base_dir:
-        return "Purples"
-    return None
-
-
 def _single_hue_colors(n, cmap_name):
     """n visible colors from a single-hue cmap, light apo -> dark high occupancy."""
     cmap = plt.get_cmap(cmap_name)
@@ -150,24 +142,20 @@ def _single_hue_colors(n, cmap_name):
     return [cmap(0.35 + 0.55 * t) for t in np.linspace(0, 1, n)]
 
 
-def _species_colors(num_species, cfg):
-    cmap_name = _condition_cmap_name(cfg)
-    if cmap_name:
-        return _single_hue_colors(num_species, cmap_name)
-    return _diverging_colors(num_species, getattr(cfg, "colormap", "PRGn"))[::-1]
-
-
-def _deconv_colors(n):
-    """n colours for deconv plots: j=0 purple → j=n-1 green."""
-    return _diverging_colors(n)
+def _species_colors(num_species, cfg, n_specific=None):
+    cmap_name = (getattr(cfg, "specific_colormap", None) if n_specific is None else None)
+    cmap_name = cmap_name or getattr(cfg, "colormap", "PRGn") or "PRGn"
+    if cmap_name == "PRGn":
+        return _diverging_colors(num_species)[::-1]
+    return _single_hue_colors(num_species, cmap_name)
 
 
 def _deconv_color_by_count(j, i, S, N, cfg=None, cmap_name='PRGn'):
     """Colour for a (j spec, m = i-j NSB) stack cell.
 
-    AMAC and EDDA runs use one-hue condition palettes, with shade depth set by
-    the relevant specific or nonspecific count. Other folders keep the legacy
-    diverging rule:
+    Explicit specific/nonspecific maps take priority for the corresponding
+    component. An explicit overall map colors both components. With no explicit
+    map, the default PRGn map uses the legacy diverging rule:
 
     Binary hue rule:
         m == 0 (no NSB, pure specific) → GREEN, saturation = j / S
@@ -187,18 +175,21 @@ def _deconv_color_by_count(j, i, S, N, cfg=None, cmap_name='PRGn'):
         6S+1N → pale purple (m=1 / 10    = 0.10, regardless of j=6)
         4S+3N → mid purple  (m=3 / 10    = 0.30)
     """
-    condition_cmap = _condition_cmap_name(cfg) if cfg is not None else None
-    if condition_cmap:
-        cmap = plt.get_cmap(condition_cmap)
+    chosen_cmap = getattr(cfg, "colormap", "PRGn") or "PRGn"
+    specific_cmap = getattr(cfg, "specific_colormap", None)
+    nonspecific_cmap = getattr(cfg, "nonspecific_colormap", None)
+    if chosen_cmap != "PRGn" or specific_cmap or nonspecific_cmap:
+        m = i - j
+        name = (specific_cmap if m == 0 else nonspecific_cmap) or chosen_cmap or cmap_name
+        cmap = plt.get_cmap(name)
         if i == 0:
             return cmap(0.30)
-        m = i - j
         max_count = S if m == 0 else S + N
         count = j if m == 0 else m
         sat = min(count / max(max_count, 1), 1.0)
         return cmap(0.30 + 0.60 * sat)
 
-    cmap = plt.get_cmap(getattr(cfg, "colormap", cmap_name) if cfg is not None else cmap_name)
+    cmap = plt.get_cmap(cmap_name)
     if i == 0:
         return cmap(0.5)
     m = i - j
@@ -539,12 +530,10 @@ def plot_species_curves(L_grid_M, F_grid, num_species, cfg, *, output_svg=None,
         if legend_kd_values is not None and num_species > 1:
             # Kd-annotated plots map the full colormap directly onto PL1..PLn.
             # Apo P is neutral because it has no associated dissociation step.
-            colors = [(0.40, 0.40, 0.40, 1.0)]
-            colors.extend(
-                _diverging_colors(num_species - 1, getattr(cfg, "colormap", "PRGn"))[::-1]
-            )
+            colors = _species_colors(num_species, cfg, n_specific=n_specific)
+            colors[0] = (0.40, 0.40, 0.40, 1.0)
         else:
-            colors = _species_colors(num_species, cfg)
+            colors = _species_colors(num_species, cfg, n_specific=n_specific)
     own = ax is None
     fig, ax = plt.subplots(figsize=FIT_FIGSIZE) if own else (ax.figure, ax)
     sm = cfg.scale_m_to_out
