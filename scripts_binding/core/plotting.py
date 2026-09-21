@@ -594,11 +594,16 @@ def plot_species_curves(L_grid_M, F_grid, num_species, cfg, *, output_svg=None,
     ax.set_yticks(np.arange(0, 1.01, 0.2))
     ax.tick_params(labelsize=FIT_TICK_SIZE)
     ax.set_ylim(0, 1.02)
+    outside_legend = legend_kd_values is not None or num_species > 6
     if legend_kd_values is not None:
         leg = ax.legend(
             ncol=1, loc="upper left", bbox_to_anchor=(1.02, 1.0),
             borderaxespad=0.0, fontsize=FIT_LEGEND_SIZE, frameon=True,
         )
+        leg.set_in_layout(False)
+    elif num_species > 6:
+        leg = ax.legend(ncol=2, loc="upper left", bbox_to_anchor=(1.02, 1.0),
+                        borderaxespad=0.0, fontsize=FIT_LEGEND_SIZE, frameon=True)
         leg.set_in_layout(False)
     else:
         leg = ax.legend(ncol=2, loc="upper right", fontsize=FIT_LEGEND_SIZE,
@@ -606,13 +611,13 @@ def plot_species_curves(L_grid_M, F_grid, num_species, cfg, *, output_svg=None,
     transparent_legend_frame(leg)
     ax.grid(True, linestyle="--", alpha=0.6)
     if own:
-        if legend_kd_values is not None:
+        if outside_legend:
             # Preserve the standard binding-panel axes width and add a
             # dedicated right-side column for the expanded vertical legend.
             # Manual margins avoid tight_layout shrinking the data panel to
             # accommodate an artist that intentionally sits outside the axes.
             fig.set_size_inches(FIT_FIGSIZE[0] + 3.0, FIT_FIGSIZE[1], forward=True)
-            fig.subplots_adjust(left=0.10, right=0.58, bottom=0.20, top=0.96)
+            fig.subplots_adjust(left=0.10, right=0.62, bottom=0.20, top=0.96)
         else:
             fig.tight_layout()
     if output_svg is not None:
@@ -624,25 +629,6 @@ def plot_species_curves(L_grid_M, F_grid, num_species, cfg, *, output_svg=None,
             plt.close(fig)
         return None
     return fig, ax
-
-
-def plot_convergence(ssr_history, output_svg, cfg):
-    """SSR convergence trace."""
-    fig = plt.figure(figsize=(6, 4))
-    plt.plot(ssr_history, marker='.', linestyle='-', markersize=8)
-    plt.xlabel('Optimizer Function Call', fontsize=cfg.base_fontsize * 1.0)
-    plt.ylabel('Sum of Squared Residuals (SSR)', fontsize=cfg.base_fontsize * 1.0)
-    plt.yscale('log')
-    plt.xticks(fontsize=cfg.base_fontsize * 0.9)
-    plt.yticks(fontsize=cfg.base_fontsize * 0.9)
-    plt.grid(True)
-    plt.tight_layout()
-    if cfg.save_plots:
-        safe_savefig(fig, output_svg, cfg.max_image_dim)
-    if cfg.show_plots:
-        plt.show()
-    else:
-        plt.close(fig)
 
 
 def _species_label(j):

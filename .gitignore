@@ -6,3 +6,4 @@ dist/
 build/
 examples/synthetic/output_demo/
 examples/synthetic/simulation/
+examples/adp_amac_20c/output/

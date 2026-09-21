@@ -1,6 +1,11 @@
 include LICENSE
+include examples/README.md
+include examples/adp_amac_20c/README.md
+include examples/adp_amac_20c/fit.yaml
+include examples/adp_amac_20c/fit_preview.png
+recursive-include examples/adp_amac_20c/data *.csv
 include examples/synthetic/titration.csv
 include examples/synthetic/parameters.csv
 include examples/synthetic/fit.yaml
-include examples/synthetic/BRIEFING.md
-include docs/images/synthetic_two_site_fit.png
+include examples/synthetic/README.md
+include examples/synthetic/fit_preview.png

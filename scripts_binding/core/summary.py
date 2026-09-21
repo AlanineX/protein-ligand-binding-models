@@ -7,7 +7,6 @@ from datetime import datetime
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
-from scipy.interpolate import interp1d
 
 from ..models import REGISTRY, deconvolve_terms
 from ..models.metadata import (
@@ -52,30 +51,31 @@ def compute_model_grid(L_grid_M, lnK_opt, S_eff, N_eff, p_total_m, model_name):
 def build_summary(all_L_tot, all_F_exp, all_Kd, all_stems, num_species_list,
                   all_lnK, all_S, all_N, model_name, out_dir, label, cfg):
     """Multi-file mean/std summary: fit plot, plus legacy Kd CSV outside compact mode."""
-    ref_L = np.unique(np.concatenate([np.asarray(x, dtype=float) for x in all_L_tot]))
+    ref_L = np.unique(np.concatenate([
+        np.asarray(x, dtype=float)[np.isfinite(x)] for x in all_L_tot
+    ]))
+    if not len(ref_L):
+        raise ValueError("No measured ligand concentrations for replicate summary")
     num_species = max(num_species_list)
     is_specific = is_sequential_specific_model(model_name)
 
-    # Interpolate experimental F_exps onto a common ligand grid
-    F_exp_interp_list = []
+    # Keep only measured replicate points at each concentration.
+    F_exp_list = []
     for L_tot, F_exp in zip(all_L_tot, all_F_exp):
-        if F_exp.shape[1] < num_species:
-            F_exp = np.pad(F_exp, ((0, 0), (0, num_species - F_exp.shape[1])), "constant")
-        F_interp = np.zeros((len(ref_L), num_species))
-        for j in range(num_species):
-            mask = ~np.isnan(L_tot) & ~np.isnan(F_exp[:, j])
-            x, y = np.array(L_tot[mask]), np.array(F_exp[:, j][mask])
-            if len(x) == 0:
-                F_interp[:, j] = np.nan
+        observed = np.full((len(ref_L), num_species), np.nan)
+        for row, concentration in zip(F_exp, L_tot):
+            if not np.isfinite(concentration):
                 continue
-            order = np.argsort(x)
-            x, y = x[order], y[order]
-            F_interp[:, j] = interp1d(x, y, bounds_error=False, fill_value=np.nan)(ref_L)
-        F_exp_interp_list.append(F_interp)
+            index = np.searchsorted(ref_L, concentration)
+            observed[index, :len(row)] = row
+        F_exp_list.append(observed)
 
-    F_arr = np.stack(F_exp_interp_list, axis=0)
+    F_arr = np.stack(F_exp_list, axis=0)
     F_exp_mean = _nanmean_no_warn(F_arr, axis=0)
-    F_exp_std = _nanstd_no_warn(F_arr, axis=0)
+    counts = np.sum(np.isfinite(F_arr), axis=0)
+    squared = np.nansum((F_arr - F_exp_mean) ** 2, axis=0)
+    F_exp_std = np.sqrt(np.divide(squared, counts - 1,
+                                  out=np.full_like(squared, np.nan), where=counts > 1))
 
     # Model curves per run on a common grid
     L_grid_M = np.linspace(ref_L.min(), ref_L.max(), 300)
@@ -90,7 +90,7 @@ def build_summary(all_L_tot, all_F_exp, all_Kd, all_stems, num_species_list,
     F_calc_std = _nanstd_no_warn(calc_arr, axis=0)
 
     n_specific = None if is_specific else max(set(all_S), key=all_S.count)
-    summary_stem = cfg.csv_name_wildcard.replace("*", "").replace(".csv", "")
+    summary_stem = os.path.basename(cfg.csv_name_wildcard).replace("*", "").replace(".csv", "")
     summary_fit_svg = os.path.join(out_dir, summary_stem + "fit_summary.svg")
     model_species_count = max(S + N + 1 for S, N in zip(all_S, all_N))
 

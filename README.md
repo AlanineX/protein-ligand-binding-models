@@ -1,52 +1,42 @@
 # Protein Ligand Binding Models
 
-Fit protein-ligand bound-state fractions from native mass spectrometry titrations. The first release provides six model families, forward simulation, plots, and a synthetic fitting demo. The Python import remains `scripts_binding` for compatibility with existing analyses.
+Fit native-MS protein-ligand bound-state fractions with sequential specific and nonspecific-adduct models. The Python import is `scripts_binding`.
 
-## Quick start
+## Run the real-data example
 
-Python 3.10 or newer is required. From this repository directory:
+Python 3.10 or newer is required. From the repository root:
 
 ```bash
 python -m venv .venv
 # Linux/macOS: source .venv/bin/activate
 # Windows PowerShell: .venv\Scripts\Activate.ps1
 python -m pip install -e .
-protein-ligand-fit examples/synthetic/fit.yaml
+protein-ligand-fit examples/adp_amac_20c/fit.yaml
 ```
 
-The demo reads `examples/synthetic/titration.csv` and writes fitted constants and a log under `examples/synthetic/output_demo/`. All config paths are relative to the YAML file, so the command also works from another directory. The two-site synthetic data were generated with dissociation constants of 5 and 20 micromolar; fitted values should be close to those numbers.
+The example fits three ADP/AmAc native-MS replicates at 20 °C. Input CSVs, configuration, provenance, and the expected graphic are together in [examples/adp_amac_20c](examples/adp_amac_20c/README.md). The command writes per-replicate fit SVGs and fitted-constant CSVs, plus a combined figure with observed replicate error bars, a summary CSV, and an optimizer log under `examples/adp_amac_20c/output/`.
 
-### Demo fit output
+![ADP AmAc 20 C combined fit: observed mean bound-state fractions with replicate error bars and mean fitted curves](examples/adp_amac_20c/fit_preview.png)
 
-![Synthetic two-site binding fit: measured fractions shown as points and fitted curves as lines](docs/images/synthetic_two_site_fit.png)
+The preview combines the three independent fits. Error bars show sample SD of measured replicates where at least two are available. The 30 µM point has one replicate and no error bar. This figure is not a claim that the model uniquely identifies binding sites or mechanisms.
 
-The fitting command generates `examples/synthetic/output_demo/sequential_specific/titration_sequential_specific_fit.svg`. The preview above was rendered from that SVG. Points are the bundled synthetic data; lines are the fitted model.
+## Other example
 
-To generate a curve from known parameters:
-
-```bash
-protein-ligand-simulate --params examples/synthetic/parameters.csv --out-dir examples/synthetic/simulation --p-tot 1 --p-tot-unit uM --ligand-max 160 --ligand-unit uM --csv
-```
+[examples/synthetic](examples/synthetic/README.md) shows a two-site fitting check and forward simulation from supplied constants. See the [example index](examples/README.md) for both commands.
 
 ## Input and output
 
-Titration CSVs need an `Entry` column for total ligand concentration and `I0`, `I1`, etc. for bound-state intensities or fractions. Set concentration units and protein concentration in YAML. Missing intensity cells stay missing; measured zeros stay zero. UTF-8, UTF-8 with BOM, UTF-16 with BOM, and Windows-1252 CSV files are accepted. Output CSVs use UTF-8 and comma separators. Use a dot as the decimal separator.
+Titration CSVs use `Entry` for total ligand concentration and `I0`, `I1`, etc. for bound-state intensities or fractions. Set ligand units and protein concentration in YAML. Missing intensity cells remain missing; measured zeros remain zero. Inputs accept UTF-8, UTF-8 BOM, UTF-16 BOM, and Windows-1252. Output CSVs use UTF-8 with comma separators and decimal points.
 
-The demo config is a starting point for your own data. The output contains fitted dissociation constants, optimization logs, and optional figures. Fit quality and parameter identifiability must be checked before biological interpretation; a good curve fit alone does not prove a binding mechanism.
+Model families: sequential specific, sequential adduct, competing adduct, stochastic adduct, occupancy decay, and shared-site. Thermodynamic analysis code is included for temperature series. Check fit quality and parameter identifiability before biological interpretation.
 
-## Models and scope
-
-The registry includes sequential specific, sequential adduct, competing adduct, stochastic adduct, occupancy decay, and shared-site models. Model selection depends on the experiment and is not automated biological validation. Thermodynamic analysis is available for temperature series, but the synthetic demo covers titration fitting only.
-
-## Development
+## Build
 
 ```bash
 python -m pip install build
 python -m build
 ```
 
-See `examples/synthetic/BRIEFING.md` for the short demo walkthrough. Real research data, publisher PDFs, and generated bulk figures are excluded from this release package.
-
 ## License
 
-BSD 3-Clause. See `LICENSE`.
+BSD 3-Clause. See [LICENSE](LICENSE).

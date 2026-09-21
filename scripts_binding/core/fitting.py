@@ -826,13 +826,13 @@ def fit_file(data_path, out_dir, cfg, model_name, S_override=None):
 
 
 def plot_fit_results(info, cfg):
-    """Generate fit curves, convergence trace, and deconvolution plot from fit_file output."""
+    """Generate fit curves and deconvolution plot from fit_file output."""
     if not cfg.save_plots and not cfg.show_plots:
         return
 
     # Imports deferred so pure fitting paths don't touch matplotlib.
     import matplotlib.pyplot as plt
-    from .plotting import safe_savefig, plot_species_curves, plot_convergence, plot_deconv_byconc
+    from .plotting import safe_savefig, plot_species_curves, plot_deconv_byconc
 
     model = REGISTRY[base_model_name(info["model_name"])]
     is_specific = is_sequential_specific_model(info["model_name"])
@@ -854,7 +854,6 @@ def plot_fit_results(info, cfg):
 
     ext = getattr(cfg, "plot_format", "svg")
     fit_svg = os.path.join(out_dir, f"{stem}_{model_output_stem}_fit.{ext}")
-    conv_svg = os.path.join(out_dir, f"{stem}_{model_output_stem}_conv.{ext}")
     plot_species_curves(
         L_grid_M, F_grid, info["num_species"], cfg, output_svg=fit_svg,
         title=f"{info['model_name']}: global fit", n_specific=n_specific_for_plot,
@@ -863,7 +862,6 @@ def plot_fit_results(info, cfg):
         legend_kd_values=(info["Kd_out"] if is_specific and getattr(cfg, "show_kd_in_legend", False) else None),
         legend_kd_unit=cfg.output_unit,
     )
-    plot_convergence(info["ssr_history"], conv_svg, cfg)
 
     if cfg.deconv_enable and not is_specific:
         dec = compute_deconvolution(

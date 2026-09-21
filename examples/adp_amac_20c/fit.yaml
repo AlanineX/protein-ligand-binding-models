@@ -1,0 +1,23 @@
+defaults:
+  models: [sequential_adduct]
+  input_unit: M
+  output_unit: uM
+  p_total_val: 1
+  p_total_unit: uM
+  s: 7
+  s_mode: manual
+  model_n_overrides:
+    sequential_adduct: 2
+  min_species_frac: 0
+  constrain_nsb_weaker_than_specific: true
+  nsb_constraint_multistart_n: 4
+  summary_enable: true
+  deconv_enable: false
+  debug_validate: false
+  save_plots: true
+systems:
+  - name: ADP_AmAc_20C
+    base_dir: .
+    wildcard_fmt: data/AMAC_20C_*.csv
+    out_fmt: output
+    temperatures: [20]
