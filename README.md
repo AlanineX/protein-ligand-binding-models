@@ -16,6 +16,12 @@ protein-ligand-fit examples/synthetic/fit.yaml
 
 The demo reads `examples/synthetic/titration.csv` and writes fitted constants and a log under `examples/synthetic/output_demo/`. All config paths are relative to the YAML file, so the command also works from another directory. The two-site synthetic data were generated with dissociation constants of 5 and 20 micromolar; fitted values should be close to those numbers.
 
+### Demo fit output
+
+![Synthetic two-site binding fit: measured fractions shown as points and fitted curves as lines](docs/images/synthetic_two_site_fit.png)
+
+The fitting command generates `examples/synthetic/output_demo/sequential_specific/titration_sequential_specific_fit.svg`. The preview above was rendered from that SVG. Points are the bundled synthetic data; lines are the fitted model.
+
 To generate a curve from known parameters:
 
 ```bash

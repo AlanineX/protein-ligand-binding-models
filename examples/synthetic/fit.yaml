@@ -8,7 +8,7 @@ defaults:
   s_mode: fixed
   min_species_frac: 0
   summary_enable: false
-  save_plots: false
+  save_plots: true
   debug_validate: false
 systems:
   - name: synthetic_two_site
