@@ -16,6 +16,14 @@ python run.py
 
 In Windows VS Code, open the repository folder, select the `.venv` Python interpreter, open `run.py`, and click **Run Python File**. It runs the ADP/AmAc example by default. To choose a different YAML for that button, edit just the `YAML_FILE = "examples/adp_amac_20c/fit.yaml"` line in `run.py`. Paths are relative to the repository root.
 
+| Path setting | Relative to |
+|---|---|
+| `YAML_FILE` in `run.py` | Repository root |
+| `base_dir`, `data_path`, `deconv_csv_path` in YAML | YAML file's directory |
+| `wildcard_fmt`, `out_fmt` in YAML | Resolved `base_dir` |
+
+Absolute paths are accepted for `YAML_FILE`, `base_dir`, `data_path`, and `deconv_csv_path`. Use forward slashes in both `run.py` and YAML on Windows, such as `C:/data/titration.csv`; they avoid backslash escapes in quoted strings.
+
 The example fits three ADP/AmAc native-MS replicates at 20 °C. Input CSVs, configuration, provenance, and the expected graphic are together in [examples/adp_amac_20c](examples/adp_amac_20c/README.md). The command writes per-replicate fit SVGs and fitted-constant CSVs, plus a combined figure with observed replicate error bars, a summary CSV, and an optimizer log under `examples/adp_amac_20c/output/`.
 
 ![ADP AmAc 20 C combined fit: observed mean bound-state fractions with replicate error bars and mean fitted curves](examples/adp_amac_20c/fit_preview.png)

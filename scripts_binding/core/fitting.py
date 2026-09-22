@@ -747,8 +747,7 @@ def fit_file(data_path, out_dir, cfg, model_name, S_override=None):
                 print(f"[FitQualityWarning] Jacobian rank-deficient: "
                       f"{rank_eff}/{len(sv)} effective dof (condition {cond:.2e}). "
                       f"Kd values for unidentified parameters are not meaningful. "
-                      f"Consider running scripts/batch_kd_scan.py with --bootstrap 200 "
-                      f"to quantify identifiability via row-resampling.")
+                      "Review the model and concentration coverage before interpreting Kd.")
     except np.linalg.LinAlgError as exc:
         print(f"[FitQualityWarning] Jacobian rank check failed: {exc}")
 
