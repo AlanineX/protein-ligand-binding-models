@@ -57,7 +57,7 @@ Titration CSVs use `Entry` for total ligand concentration and `I0`, `I1`, etc. f
 
 Model families: sequential specific, sequential adduct, competing adduct, stochastic adduct, occupancy decay, and shared-site. Thermodynamic analysis code is included for temperature series. Check fit quality and parameter identifiability before biological interpretation.
 
-The shared-site model has `n_params(S) = 2` because it fits one shared specific affinity and one nonspecific affinity. `S` controls how many equivalent specific sites enter the combinatorial model; it does not create one fitted affinity per site. All models retain the same `n_params(S)` interface so the generic fitter can query them uniformly.
+The shared-site model has $n_{\mathrm{params}}(S)=2$ because it fits one shared specific affinity and one nonspecific affinity. $S$ controls how many equivalent specific sites enter the combinatorial model; it does not create one fitted affinity per site. All models retain the same `n_params` interface so the generic fitter can query them uniformly.
 
 ### Choose a site count
 
