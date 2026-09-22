@@ -5,7 +5,10 @@ from pathlib import Path
 
 import yaml
 
+from scripts_binding.models import REGISTRY
 from scripts_binding.models.metadata import (
+    DEFAULT_NSB_MODELS,
+    base_model_name,
     canonicalize_model_list,
     canonicalize_override_map,
     configured_name_map,
@@ -112,8 +115,28 @@ class RunConfig:
             if name is not None and name not in colormaps:
                 raise ValueError(f"Unknown Matplotlib colormap for {key}: {name}")
         self.models = canonicalize_model_list(self.models)
+        if not self.models:
+            raise ValueError("models must contain at least one model ID")
+        unknown_models = [name for name in self.models if base_model_name(name) not in REGISTRY]
+        if unknown_models:
+            raise ValueError(f"Unknown model ID(s): {', '.join(unknown_models)}")
         self.reference_model = normalize_model_name(self.reference_model)
         self.nested_ftest_models = canonicalize_model_list(self.nested_ftest_models)
+        if base_model_name(self.reference_model) not in REGISTRY:
+            raise ValueError(f"Unknown reference_model: {self.reference_model}")
+        invalid_ftests = [name for name in self.nested_ftest_models if name not in DEFAULT_NSB_MODELS]
+        if invalid_ftests:
+            raise ValueError(f"Models not eligible for nested F-tests: {', '.join(invalid_ftests)}")
+        if not isinstance(self.s_mode, str) or self.s_mode.lower() not in {"auto", "manual", "fixed"}:
+            raise ValueError("s_mode must be auto, manual, or fixed (legacy)")
+        if not isinstance(self.deconv_source, str) or self.deconv_source.lower() not in {"calc", "exp"}:
+            raise ValueError("deconv_source must be calc or exp")
+        self.deconv_source = self.deconv_source.lower()
+        if self.plot_format not in {"svg", "png"}:
+            raise ValueError("plot_format must be svg or png")
+        for key in ("input_unit", "output_unit", "p_total_unit"):
+            if getattr(self, key) not in UNIT_MAP:
+                raise ValueError(f"{key} must be one of: {', '.join(UNIT_MAP)}")
         self.model_s_overrides = canonicalize_override_map(self.model_s_overrides)
         self.model_n_overrides = canonicalize_override_map(self.model_n_overrides)
         self.model_display_names = configured_name_map(self.model_display_names)
@@ -130,11 +153,23 @@ def load_configs(yaml_path: str) -> list[RunConfig]:
     with open(yaml_path, encoding="utf-8-sig") as f:
         raw = yaml.safe_load(f)
 
+    if not isinstance(raw, dict):
+        raise TypeError("YAML root must be a mapping with a systems list")
+
     defaults = raw.get("defaults", {})
     systems = raw.get("systems", [])
+    if not isinstance(defaults, dict) or not isinstance(systems, list):
+        raise TypeError("YAML needs a defaults mapping and a systems list")
+    if not systems:
+        raise ValueError("YAML needs at least one system")
+    derived_keys = {"base_dir", "out_dir", "csv_name_wildcard", "system_name", "temperature_C"}
+    if derived_keys & defaults.keys():
+        raise ValueError(f"Set derived paths and labels in systems: {', '.join(sorted(derived_keys & defaults.keys()))}")
     configs = []
 
     for system in systems:
+        if not isinstance(system, dict):
+            raise TypeError("Each system must be a YAML mapping")
         sys_cfg = dict(system)
         temps = sys_cfg.pop("temperatures", [25])
         name = sys_cfg.pop("name", "unknown")
@@ -164,16 +199,18 @@ def load_configs(yaml_path: str) -> list[RunConfig]:
         unknown = set(merged) - valid_keys
         if unknown:
             raise ValueError(f"Unknown configuration keys: {', '.join(sorted(unknown))}")
+        if derived_keys & merged.keys():
+            raise ValueError(f"System contains derived keys: {', '.join(sorted(derived_keys & merged.keys()))}")
 
         for t in temps:
-            wildcard = csv_pattern.format(t=t)
+            input_csv_pattern = csv_pattern.format(t=t)
             out_dir = os.path.join(base_dir, output_folder.format(t=t))
 
             cfg_dict = {
                 **merged,
                 "base_dir": base_dir,
                 "out_dir": out_dir,
-                "csv_name_wildcard": wildcard,
+                "csv_name_wildcard": input_csv_pattern,
                 "system_name": name,
                 "temperature_C": t,
             }

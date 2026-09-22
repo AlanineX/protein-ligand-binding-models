@@ -169,6 +169,13 @@ def run_single(cfg):
     if not cfg.models:
         raise ValueError("cfg.models is empty — specify at least one model name.")
 
+    deconv_models = [
+        name for name in cfg.models
+        if hasattr(REGISTRY[base_model_name(name)], "partition_terms")
+    ]
+    if cfg.deconv_enable and not cfg.compact_outputs and cfg.deconv_csv_path and len(data_paths) * len(deconv_models) > 1:
+        raise ValueError("deconv_csv_path needs one input CSV and one deconvolution model")
+
     if getattr(cfg, "compact_outputs", False):
         _prepare_compact_output_dir(cfg)
 
@@ -193,7 +200,16 @@ def run_single(cfg):
 
 
 def run_all(yaml_path):
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(errors="backslashreplace")
     configs = load_configs(yaml_path)
+    custom_deconv_paths = [
+        os.path.normcase(os.path.abspath(cfg.deconv_csv_path)) for cfg in configs
+        if cfg.deconv_enable and not cfg.compact_outputs and cfg.deconv_csv_path
+        and any(hasattr(REGISTRY[base_model_name(name)], "partition_terms") for name in cfg.models)
+    ]
+    if len(custom_deconv_paths) != len(set(custom_deconv_paths)):
+        raise ValueError("Each system needs a distinct deconv_csv_path")
     print(f"Loaded {len(configs)} run configuration(s) from {yaml_path}")
     for i, cfg in enumerate(configs):
         print(f"\n{'='*60}")
@@ -206,8 +222,6 @@ def run_all(yaml_path):
 
 
 def main():
-    if hasattr(sys.stdout, "reconfigure"):
-        sys.stdout.reconfigure(errors="backslashreplace")
     parser = argparse.ArgumentParser(description="Fit protein-ligand binding distributions")
     parser.add_argument("config", help="YAML configuration file")
     args = parser.parse_args()

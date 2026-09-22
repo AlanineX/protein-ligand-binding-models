@@ -5,7 +5,7 @@ import pandas as pd
 from ..models.metadata import is_dimensionless_param
 
 
-def _fmt(value, spec=".3e"):
+def _format_number(value, spec=".3e"):
     if value is None or not np.isfinite(value):
         return "N/A"
     return f"{value:{spec}}"
@@ -44,10 +44,10 @@ def print_results_table(param_names, raw_params, Ka_opt_M, Kd_opt_M, has_errors,
             if has_errors and std_Kd_M is not None else np.nan
         )
         if show_uncertainty:
-            print(f"{name:>10} | {_fmt(value):^18} | {value_unit:^12} | "
-                  f"{_fmt(value_unc, '.2e'):^16} | {_fmt(Kd_out):^14} | {_fmt(kd_unc, '.2e'):^16}")
+            print(f"{name:>10} | {_format_number(value):^18} | {value_unit:^12} | "
+                  f"{_format_number(value_unc, '.2e'):^16} | {_format_number(Kd_out):^14} | {_format_number(kd_unc, '.2e'):^16}")
         else:
-            print(f"{name:>10} | {_fmt(value):^18} | {value_unit:^12} | {_fmt(Kd_out):^14}")
+            print(f"{name:>10} | {_format_number(value):^18} | {value_unit:^12} | {_format_number(Kd_out):^14}")
     print("-" * len(header), "\n")
 
 

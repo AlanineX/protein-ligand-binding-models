@@ -88,7 +88,7 @@ def _short_label(raw):
     return raw.strip()
 
 
-def _g4(x):
+def _format_four_significant_digits(x):
     """Format to 4 significant figures (%.4g). Auto scientific notation."""
     if x is None or (isinstance(x, float) and (np.isnan(x) or np.isinf(x))):
         return np.nan
@@ -169,13 +169,13 @@ def run_analysis(data, N, method, ref_temp_C=25.0, error_mode="covariance"):
                 "site": si + 1, "label": label, "is_kn": is_kn,
                 "N": N, "method": method, "replicate": f"rep{ri + 1}",
                 "T0_K": T0, "n_temps": int(mask.sum()),
-                "dH_kJmol": _g4(res["dH"]), "e_dH": None,
-                "dS_kJmolK": _g4(res["dS"]), "e_dS": None,
-                "Cp_kJmolK": _g4(res["Cp"]), "e_Cp": None,
-                "dG_kJmol": _g4(res["dG"]), "e_dG": None,
-                "mTdS_kJmol": _g4(res["minus_TdS"]), "e_mTdS": None,
-                "Kd_uM": _g4(res["Kd_uM"]),
-                "R2": _g4(res["R2"]),
+                "dH_kJmol": _format_four_significant_digits(res["dH"]), "e_dH": None,
+                "dS_kJmolK": _format_four_significant_digits(res["dS"]), "e_dS": None,
+                "Cp_kJmolK": _format_four_significant_digits(res["Cp"]), "e_Cp": None,
+                "dG_kJmol": _format_four_significant_digits(res["dG"]), "e_dG": None,
+                "mTdS_kJmol": _format_four_significant_digits(res["minus_TdS"]), "e_mTdS": None,
+                "Kd_uM": _format_four_significant_digits(res["Kd_uM"]),
+                "R2": _format_four_significant_digits(res["R2"]),
             })
 
         # Weighted mean-fit (primary result). The same fit is used for both
@@ -242,16 +242,16 @@ def run_analysis(data, N, method, ref_temp_C=25.0, error_mode="covariance"):
             "N": N, "method": method, "replicate": "mean",
             "T0_K": T0, "n_temps": int(mask_m.sum()),
             "error_mode": error_mode,
-            "dH_kJmol": _g4(dH_c), "e_dH": _g4(e_dH),
-            "dS_kJmolK": _g4(dS_c), "e_dS": _g4(e_dS),
-            "Cp_kJmolK": _g4(Cp_c), "e_Cp": _g4(e_Cp),
-            "dG_kJmol": _g4(dG_c), "e_dG": _g4(e_dG),
-            "mTdS_kJmol": _g4(mTdS_c), "e_mTdS": _g4(e_mTdS),
-            "Kd_uM": _g4(Kd_c),
-            "R2": _g4(R2_c),
-            "chi2": _g4(chi2_c),
-            "BIC": _g4(BIC_c),
-            "AICc": _g4(AICc_c),
+            "dH_kJmol": _format_four_significant_digits(dH_c), "e_dH": _format_four_significant_digits(e_dH),
+            "dS_kJmolK": _format_four_significant_digits(dS_c), "e_dS": _format_four_significant_digits(e_dS),
+            "Cp_kJmolK": _format_four_significant_digits(Cp_c), "e_Cp": _format_four_significant_digits(e_Cp),
+            "dG_kJmol": _format_four_significant_digits(dG_c), "e_dG": _format_four_significant_digits(e_dG),
+            "mTdS_kJmol": _format_four_significant_digits(mTdS_c), "e_mTdS": _format_four_significant_digits(e_mTdS),
+            "Kd_uM": _format_four_significant_digits(Kd_c),
+            "R2": _format_four_significant_digits(R2_c),
+            "chi2": _format_four_significant_digits(chi2_c),
+            "BIC": _format_four_significant_digits(BIC_c),
+            "AICc": _format_four_significant_digits(AICc_c),
         })
 
     return rows, temps_K, temps_C, lnKa_mean, lnKa_std, kn_col, lnKa_sd
