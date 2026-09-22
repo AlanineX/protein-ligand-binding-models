@@ -11,8 +11,10 @@ python -m venv .venv
 # Linux/macOS: source .venv/bin/activate
 # Windows PowerShell: .venv\Scripts\Activate.ps1
 python -m pip install -e .
-protein-ligand-fit examples/adp_amac_20c/fit.yaml
+python run.py examples/adp_amac_20c/fit.yaml
 ```
+
+For the synthetic example, run `python run.py` with no argument. In Windows VS Code, open the repository folder, select the `.venv` Python interpreter, open `run.py`, and click **Run Python File**. It runs the synthetic YAML by default; change `DEFAULT_CONFIG` at the top of `run.py` to use another YAML when launching with that button. Relative YAML arguments are resolved from the repository root.
 
 The example fits three ADP/AmAc native-MS replicates at 20 °C. Input CSVs, configuration, provenance, and the expected graphic are together in [examples/adp_amac_20c](examples/adp_amac_20c/README.md). The command writes per-replicate fit SVGs and fitted-constant CSVs, plus a combined figure with observed replicate error bars, a summary CSV, and an optimizer log under `examples/adp_amac_20c/output/`.
 

@@ -1,17 +1,64 @@
-defaults:
-  models: [sequential_specific]
-  input_unit: uM
-  output_unit: uM
-  p_total_val: 1
-  p_total_unit: uM
-  s: 2
-  s_mode: fixed
-  min_species_frac: 0
-  summary_enable: false
-  save_plots: true
-  debug_validate: false
-systems:
-  - name: synthetic_two_site
-    base_dir: .
-    data_path: titration.csv
-    out_fmt: output_demo
+defaults: # Shared settings for every system below.
+  models: [sequential_specific] # Model IDs to fit; see README for available models.
+  input_unit: uM # Unit of the CSV Entry concentration column.
+  output_unit: uM # Unit used for fitted constants and plot axes.
+  p_total_val: 1.0 # Total protein concentration.
+  p_total_unit: uM # Unit of p_total_val.
+
+  s: 2 # Proposed number of specific binding steps.
+  s_mode: manual # manual uses s; auto selects a site count from data.
+  n_override: null # Extra adduct slots; null infers them from CSV width.
+  model_s_overrides: {} # Optional per-model specific-step counts.
+  model_n_overrides: {} # Optional per-model adduct-slot counts.
+  auto_adjust_s: true # Clamp an oversized adduct-model s to the data width.
+  min_species_frac: 0 # Minimum species fraction retained during fitting.
+  trim_specific_low_pop: false # Remove trailing low-population states in specific-only fits.
+  constrain_nsb_weaker_than_specific: true # Require weaker nonspecific affinity in adduct fits.
+  nsb_constraint_multistart_n: 24 # Number of constrained initial guesses for adduct fits.
+  nsb_constraint_max_nfev: 2000 # Optimizer evaluations allowed for each guess.
+  nsb_constraint_fallback_to_unconstrained: true # Retry without constraint if needed.
+  nsb_constraint_log_margin: 1.0e-6 # Minimum log-affinity separation for the constraint.
+
+  reference_model: sequential_specific # Reduced model for nested comparisons.
+  nested_ftest_models: [sequential_adduct, competing_adduct, stochastic_adduct, occupancy_decay] # Eligible full models.
+  ftest_alpha: 0.05 # Significance threshold for nested F-tests.
+  model_display_names: {} # Optional model labels in reports.
+  model_output_names: {} # Optional model names in output filenames.
+
+  deconv_enable: false # Deconvolution applies only to adduct models.
+  deconv_source: calc # Use calculated fractions; exp selects observed fractions.
+  deconv_use_grid: false # Use observed concentrations; true uses a regular grid.
+  deconv_grid_points: 40 # Number of points when deconv_use_grid is true.
+  deconv_csv_path: null # Optional single-file deconvolution CSV path, relative to this YAML.
+  report_ligand_conc: [] # Concentrations to print in a deconvolution report.
+
+  save_plots: true # Write plot files.
+  show_plots: false # Avoid opening GUI windows, including on Windows.
+  plot_format: svg # Plot file format: svg or png.
+  debug_validate: false # Print extra model validation diagnostics.
+  debug_index: 0 # Index of the point inspected by debug validation.
+  debug_ligand_conc: 20 # Ligand concentration inspected by debug validation.
+  debug_i_index: 1 # Bound-state index inspected by debug validation.
+  deconv_legend_loc: best # Legend position for deconvolution plots.
+  show_kd_in_legend: false # Add fitted constants to specific-only plot legends.
+
+  summary_enable: false # Combine replicate results; unnecessary for one CSV.
+  summary_show_calc_shade: false # Shade calculated replicate spread in summary plots.
+  brief: false # Keep per-replicate plots and constant CSVs.
+  compact_outputs: false # Use ordinary per-model output folders.
+  export_csv: false # Export workbook sheets as CSV in compact mode.
+  report_uncertainty: true # Show available fit uncertainty in outputs.
+
+  max_image_dim: 1800 # Maximum saved figure dimension in pixels.
+  base_fontsize: 20 # Base font size for summary and deconvolution figures.
+  colormap: PRGn # Colormap for all apparent bound-state curves.
+  specific_colormap: null # Optional map for specific-only fits and pure-specific components.
+  nonspecific_colormap: null # Optional map for nonspecific deconvolution components.
+
+systems: # One entry per dataset; settings here override defaults.
+  - name: synthetic_two_site # Label printed with this run.
+    base_dir: . # Data and output folder, relative to this YAML.
+    data_path: titration.csv # Exact CSV to fit; takes priority over wildcard_fmt.
+    wildcard_fmt: titration.csv # CSV pattern used if data_path is removed.
+    out_fmt: output_demo # Output folder inside base_dir.
+    temperatures: [25] # Run label in degrees C; does not affect titration fitting.

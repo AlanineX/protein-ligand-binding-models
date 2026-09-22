@@ -664,6 +664,7 @@ def compute_deconvolution(model, df, L_totals_M, F_exps, F_calcs, lnK_opt, S, N,
                 })
     if not getattr(cfg, "compact_outputs", False):
         deconv_csv = cfg.deconv_csv_path or os.path.join(out_dir, f"{stem}_deconv.csv")
+        os.makedirs(os.path.dirname(os.path.abspath(deconv_csv)), exist_ok=True)
         pd.DataFrame(rows).to_csv(deconv_csv, index=False)
         print(f"Saved deconvolution table to: {deconv_csv}")
 

@@ -17,4 +17,5 @@ jobs:
           python-version: ${{ matrix.python-version }}
       - run: python -m pip install -e . build
       - run: python -m build
-      - run: protein-ligand-fit examples/adp_amac_20c/fit.yaml
+      - run: python run.py
+      - run: python run.py examples/adp_amac_20c/fit.yaml

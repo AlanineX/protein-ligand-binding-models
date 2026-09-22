@@ -5,7 +5,7 @@
 From the repository root after installation:
 
 ```bash
-protein-ligand-fit examples/adp_amac_20c/fit.yaml
+python run.py examples/adp_amac_20c/fit.yaml
 ```
 
 The command fits the three CSVs independently with the sequential-adduct model. It writes results to `output/sequential_adduct/` within this folder. Inspect `AMAC_20C_fit_summary.svg` for the combined figure and `AMAC_20C_stat_summary.csv` for the replicate constant summary. Each replicate also has `AMAC_20C_N_kd.csv` and `AMAC_20C_N_sequential_adduct_fit.svg`; the optimizer log is `sequential_adduct_log.txt`.

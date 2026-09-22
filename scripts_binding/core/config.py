@@ -43,8 +43,6 @@ class RunConfig:
     nsb_constraint_max_nfev: int = 2000
     nsb_constraint_fallback_to_unconstrained: bool = True
     nsb_constraint_log_margin: float = 1e-6
-    s_iteration_nsb_constraint_multistart_n: int | None = None
-    s_iteration_nsb_constraint_max_nfev: int | None = None
 
     # --- Models to run (names from models.REGISTRY) ---
     models: list[str] = field(default_factory=lambda: ["sequential_specific", "sequential_adduct"])
@@ -91,8 +89,6 @@ class RunConfig:
     compact_outputs: bool = False
     export_csv: bool = False
     report_uncertainty: bool = True
-    s_iteration_workbook_metrics: list[str] = field(default_factory=lambda: ["R2", "AICc", "p_value"])
-    s_iteration_workbook_p_value_mode: str = "threshold"
 
     # --- Run identity ---
     system_name: str = ""
@@ -169,8 +165,9 @@ def load_configs(yaml_path: str) -> list[RunConfig]:
                 "system_name": name,
                 "temperature_C": t,
             }
-            if cfg_dict.get("data_path") and not Path(cfg_dict["data_path"]).is_absolute():
-                cfg_dict["data_path"] = str((config_dir / cfg_dict["data_path"]).resolve())
+            for key in ("data_path", "deconv_csv_path"):
+                if cfg_dict.get(key) and not Path(cfg_dict[key]).is_absolute():
+                    cfg_dict[key] = str((config_dir / cfg_dict[key]).resolve())
 
             # Only pass keys that RunConfig accepts
             filtered = {k: v for k, v in cfg_dict.items() if k in valid_keys}
