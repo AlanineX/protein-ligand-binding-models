@@ -168,7 +168,7 @@ def build_deconv_summary(model_name, ref_L, F_exp_mean, F_exp_std, mean_lnK,
     summary_deconv_svg = os.path.join(out_dir, summary_stem + "deconv_summary.svg")
     fig = plot_deconv_byconc(
         ref_L * cfg.scale_m_to_out, contrib_all, summary_S, summary_N,
-        "Deconvoluted fraction of apparent", cfg,
+        cfg,
         outline_totals=F_exp_mean, outline_err=F_exp_std, outline_label="Frac_expt",
     )
     safe_savefig(fig, summary_deconv_svg, cfg.max_image_dim)
@@ -232,36 +232,6 @@ def _kd_symbol(param_name):
     if param_name == "gamma":
         return "gamma"
     return param_name
-
-
-def _parameter_class(param_name):
-    if param_name == "gamma":
-        return "empirical_shape"
-    if param_name == "Ks":
-        return "shared_specific_binding"
-    if param_name.startswith("Ks_"):
-        return "specific_binding"
-    if param_name in ("Kn", "beta"):
-        return "nonspecific_binding"
-    return "other"
-
-
-def _ci95_from_log_se(value, se_log_or_value, log_scale):
-    if value is None or not np.isfinite(value):
-        return np.nan, np.nan
-    if se_log_or_value is None or not np.isfinite(se_log_or_value):
-        return np.nan, np.nan
-    half = 1.96 * float(se_log_or_value)
-    if log_scale:
-        if value <= 0:
-            return np.nan, np.nan
-        log_value = np.log(value)
-        lo_log = log_value - half
-        hi_log = log_value + half
-        lo = 0.0 if lo_log < -745.0 else float(np.exp(lo_log))
-        hi = np.inf if hi_log > 709.0 else float(np.exp(hi_log))
-        return lo, hi
-    return float(value - half), float(value + half)
 
 
 def _metrics_from_result(d):

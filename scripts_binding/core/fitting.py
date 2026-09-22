@@ -877,7 +877,7 @@ def plot_fit_results(info, cfg):
             outline_totals = None if cfg.deconv_use_grid else F_exps
             fig = plot_deconv_byconc(
                 dec["L_vals_M"] * cfg.scale_m_to_out, dec["contrib_all"], S_eff, N_eff,
-                "Deconvoluted fraction of apparent", cfg,
+                cfg,
                 outline_totals=outline_totals, outline_label="Frac_expt",
             )
             if cfg.save_plots:

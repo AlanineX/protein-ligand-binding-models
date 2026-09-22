@@ -1,7 +1,6 @@
 """Results tables + CSV output."""
 import numpy as np
 import pandas as pd
-from numpy.linalg import inv
 
 from ..models.metadata import is_dimensionless_param
 
@@ -50,42 +49,6 @@ def print_results_table(param_names, raw_params, Ka_opt_M, Kd_opt_M, has_errors,
         else:
             print(f"{name:>10} | {_fmt(value):^18} | {value_unit:^12} | {_fmt(Kd_out):^14}")
     print("-" * len(header), "\n")
-
-
-def compute_uncertainties(fit, raw_params, Ka_opt_M, Kd_opt_M, ssr_history,
-                          param_names=None, n_obs=None):
-    """Standard errors from the Jacobian in each parameter's natural units."""
-    J = fit.jac
-    N_obs = fit.fun.size if n_obs is None else n_obs
-    p = len(raw_params)
-    has_errors = False
-    std_param = std_Ka_M = std_Kd_M = None
-    if N_obs > p:
-        rss = ssr_history[-1]
-        sig2 = rss / (N_obs - p)
-        try:
-            cov_params = sig2 * inv(J.T @ J)
-            diag = np.diag(cov_params)
-            if np.any(diag < 0):
-                raise ValueError("negative covariance diagonal")
-            std_param = np.sqrt(diag)
-            std_Ka_M = np.full(p, np.nan, dtype=float)
-            std_Kd_M = np.full(p, np.nan, dtype=float)
-            if param_names is None:
-                param_names = [""] * p
-            for i, name in enumerate(param_names):
-                if is_dimensionless_param(name):
-                    continue
-                std_Ka_M[i] = Ka_opt_M[i] * std_param[i]
-                std_Kd_M[i] = Kd_opt_M[i] * std_param[i]
-            has_errors = True
-        except np.linalg.LinAlgError:
-            print("Warning: Could not compute uncertainties (Jacobian matrix is singular).")
-        except ValueError as exc:
-            print(f"Warning: Could not compute uncertainties ({exc}).")
-    else:
-        print("Warning: Not enough data points to compute uncertainties.")
-    return has_errors, std_param, std_Ka_M, std_Kd_M
 
 
 def save_kd_csv(param_names, raw_params, Ka_opt_M, Kd_opt_M, has_errors, std_param,

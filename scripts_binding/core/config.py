@@ -73,7 +73,6 @@ class RunConfig:
     debug_index: int = 0
     debug_ligand_conc: float | None = 30
     debug_i_index: int = 4
-    deconv_legend_loc: str = "best"
     show_kd_in_legend: bool = False
 
     # --- Summary ---

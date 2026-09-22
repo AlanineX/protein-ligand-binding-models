@@ -24,21 +24,40 @@ In Windows VS Code, open the repository folder, select the `.venv` Python interp
 
 Absolute paths are accepted for `YAML_FILE`, `base_dir`, `data_path`, and `deconv_csv_path`. Use forward slashes in both `run.py` and YAML on Windows, such as `C:/data/titration.csv`; they avoid backslash escapes in quoted strings.
 
-The example fits three ADP/AmAc native-MS replicates at 20 °C. Input CSVs, configuration, provenance, and the expected graphic are together in [examples/adp_amac_20c](examples/adp_amac_20c/README.md). The command writes per-replicate fit SVGs and fitted-constant CSVs, plus a combined figure with observed replicate error bars, a summary CSV, and an optimizer log under `examples/adp_amac_20c/output/`.
+The example fits three ADP/AmAc native-MS replicates at 20 °C. Its CSVs, YAML, and preview are together under `examples/adp_amac_20c/`. The command writes per-replicate fit SVGs and fitted-constant CSVs, plus a combined figure with observed replicate error bars, a summary CSV, and an optimizer log under `examples/adp_amac_20c/output/`.
 
 ![ADP AmAc 20 C combined fit: observed mean bound-state fractions with replicate error bars and mean fitted curves](examples/adp_amac_20c/fit_preview.png)
 
 The preview combines the three independent fits. Error bars show sample SD of measured replicates where at least two are available. The 30 µM point has one replicate and no error bar. This figure is not a claim that the model uniquely identifies binding sites or mechanisms.
 
-## Other example
+### Real-example settings and provenance
 
-[examples/synthetic](examples/synthetic/README.md) shows a two-site fitting check and forward simulation from supplied constants. See the [example index](examples/README.md) for both commands.
+| Item | Value |
+|---|---|
+| Protein | SR, 1 µM total |
+| Ligand and buffer | ADP in AmAc, 20 °C |
+| Model | Sequential adduct, 7 specific steps and 2 additional adduct slots |
+| Replicates measured | 0, 5, 10, 50 µM: 3; 20, 100 µM: 2; 30 µM: 1 |
+
+The CSVs were copied byte-for-byte from the local research dataset. SHA-256: replicate 1 `95e9a71db642eee6204088e141ed5b11f925522008d1a5a800d7e39241f06ba0`; replicate 2 `320d111958cc38436a792a41a9a3a5b92ac39bb8c0215ecf683f88b1a8f418ab`; replicate 3 `40e03bfa30b9559ce3a69a0d46548729bd4adad51e314b1d1af924c64f93bbff`.
+
+## Synthetic fitting example
+
+```bash
+python run.py examples/synthetic/fit.yaml
+```
+
+![Synthetic two-site fit](examples/synthetic/fit_preview.png)
+
+This fits the bundled two-site titration generated with 5 and 20 µM dissociation constants. Its heavily commented `fit.yaml` lists every supported fitting setting.
 
 ## Input and output
 
 Titration CSVs use `Entry` for total ligand concentration and `I0`, `I1`, etc. for bound-state intensities or fractions. Set ligand units and protein concentration in YAML. Missing intensity cells remain missing; measured zeros remain zero. Inputs accept UTF-8, UTF-8 BOM, UTF-16 BOM, and Windows-1252. Output CSVs use UTF-8 with comma separators and decimal points.
 
 Model families: sequential specific, sequential adduct, competing adduct, stochastic adduct, occupancy decay, and shared-site. Thermodynamic analysis code is included for temperature series. Check fit quality and parameter identifiability before biological interpretation.
+
+The shared-site model has `n_params(S) = 2` because it fits one shared specific affinity and one nonspecific affinity. `S` controls how many equivalent specific sites enter the combinatorial model; it does not create one fitted affinity per site. All models retain the same `n_params(S)` interface so the generic fitter can query them uniformly.
 
 ### Choose a site count
 

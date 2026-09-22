@@ -4,8 +4,6 @@ Reuses PlotConfig (font defaults), golden_figsize, _diverging_colors, and
 safe_savefig so these plots look visually consistent with the Kd-side deconv
 and mole-fraction plots.
 """
-import colorsys
-
 import matplotlib
 import numpy as np
 
@@ -21,16 +19,6 @@ from ..core.plotting import (
     safe_savefig,
 )
 from .nlvh import lvh_equation, nlvh_equation
-
-
-def _muted(hex_color, sat_scale=0.85, l_shift=0.02):
-    """Adjust saturation × sat_scale and lightness by +l_shift (HLS space)."""
-    r, g, b = mcolors.to_rgb(hex_color)
-    h, l, s = colorsys.rgb_to_hls(r, g, b)
-    s = max(0, min(1, s * sat_scale))
-    l = max(0, min(1, l + l_shift))
-    return mcolors.to_hex(colorsys.hls_to_rgb(h, l, s))
-
 
 # Thermodynamics palettes. Each triple is ordered as (ΔG, ΔH, −TΔS).
 PALETTE_PRESETS = {
@@ -126,8 +114,6 @@ DEFAULT_ALPHA = 0.85
 # extend far outside this range, plot_thermo_bars uses a broken y-axis with
 # separate high/mid/low windows instead of stretching one continuous axis.
 THERMO_YLIM = (-35, 5)
-THERMO_YTICK_MAJOR = 5    # kJ/mol between major gridlines
-THERMO_YTICK_MINOR = 1    # kJ/mol between minor gridlines
 THERMO_BREAK_GAP = 5      # minimum omitted gap between adjacent y-windows
 THERMO_BREAK_MIN_EXCESS = 8
 THERMO_BREAK_TARGET_SPAN = 80
@@ -168,9 +154,6 @@ def _xtick_labels(sub):
         else:
             labels.append(rf"$K_{{{idx}}}$")
     return labels
-
-COLOR_DG, COLOR_DH, COLOR_TDS = thermo_palette(DEFAULT_PALETTE)
-
 
 def _bar_style(palette, channel, default_alpha, fill_hex):
     """Per-bar {facecolor, edgecolor, lw} for (palette, channel).

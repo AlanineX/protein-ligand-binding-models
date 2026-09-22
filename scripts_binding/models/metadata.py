@@ -117,26 +117,6 @@ def output_parameter_name(parameter_name):
     return label
 
 
-def internal_parameter_name(parameter_name, model_name=None):
-    """Convert exported Kd-style labels back to internal fit labels."""
-    label = str(parameter_name)
-    m = re.match(r"^K_?d[,_](\d+)$", label, flags=re.IGNORECASE)
-    if m:
-        return f"Ks_{m.group(1)}"
-    if re.match(r"^K_?d[,_]?avg$", label, flags=re.IGNORECASE):
-        return "Ks"
-    if re.match(r"^K_?d[,_]?n$", label, flags=re.IGNORECASE):
-        if normalize_model_name(model_name) in {"competing_adduct", "occupancy_decay"}:
-            return "beta"
-        return "Kn"
-    return label
-
-
-def raw_model_name(model_name):
-    """Return the canonical registry name for a configured model identifier."""
-    return normalize_model_name(model_name)
-
-
 def is_dimensionless_param(param_name):
     """True for fitted parameters that are not log(Ka)-encoded constants."""
     return param_name in DIMENSIONLESS_PARAMS
@@ -168,22 +148,3 @@ def ka_kd_from_optimizer(param_names, raw_params):
         Ka_M_inv[i] = value
         Kd_M[i] = 1.0 / value if value > 0 else np.nan
     return values, Ka_M_inv, Kd_M
-
-
-def model_param_map(model_name, S):
-    """Map table parameter columns to raw parameter labels for a model.
-
-    Returned keys are ``Kn``, ``Ks_1`` ... ``Ks_S``. Values are parameter labels
-    in fit CSVs, or ``None`` when the model has no parameter for that column.
-    """
-    model_name = raw_model_name(model_name)
-    cols = ["Kn"] + [f"Ks_{k}" for k in range(1, S + 1)]
-    if is_sequential_specific_model(model_name):
-        return {c: (None if c == "Kn" else c) for c in cols}
-    if model_name in ("sequential_adduct", "stochastic_adduct"):
-        return {c: c for c in cols}
-    if model_name == "shared_site":
-        return {c: ("Kn" if c == "Kn" else "Ks" if c == "Ks_1" else None) for c in cols}
-    if model_name in ("occupancy_decay", "competing_adduct"):
-        return {c: ("beta" if c == "Kn" else c) for c in cols}
-    return {c: c for c in cols}

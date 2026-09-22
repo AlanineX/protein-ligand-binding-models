@@ -9,9 +9,6 @@ from .figure_style import (
     AXIS_LABEL_SIZE as SINGLE_AXIS_LABEL_SIZE,
 )
 from .figure_style import (
-    BASE_FONT_SIZE as SINGLE_BASE_FONT_SIZE,
-)
-from .figure_style import (
     FIGSIZE as SINGLE_FIGSIZE,
 )
 from .figure_style import (
@@ -33,7 +30,6 @@ from .figure_style import (
 GOLDEN = 1.618  # Subplot/figure width:height ratio for publication aesthetics.
 
 # Fit-curve sizing — same single-panel family as demo and saturation figures.
-FIT_BASE_FONT_SIZE = SINGLE_BASE_FONT_SIZE
 FIT_AXIS_LABEL_SIZE = SINGLE_AXIS_LABEL_SIZE
 FIT_TICK_SIZE = SINGLE_TICK_SIZE
 FIT_LEGEND_SIZE = SINGLE_LEGEND_SIZE
@@ -53,7 +49,6 @@ class PlotConfig:
     base_fontsize: int = 20
     output_unit: str = "uM"
     scale_m_to_out: float = 1e6
-    deconv_legend_loc: str = "best"
     save_plots: bool = True
     show_plots: bool = False
     max_image_dim: int = 2400
@@ -65,11 +60,9 @@ class PlotConfig:
 
 
 def setup_matplotlib(cfg):
-    """Apply font settings from cfg (Arial house style; Liberation Sans is the
-    Arial-metric-compatible fallback, DejaVu Sans the last resort)."""
+    """Apply portable font settings without missing-font warnings."""
     plt.rcParams.update({
-        'font.family': 'Arial',
-        'font.sans-serif': ['Arial', 'Liberation Sans', 'DejaVu Sans'],
+        'font.family': 'DejaVu Sans',
         'mathtext.fontset': 'dejavusans',
         'font.size': cfg.base_fontsize,
     })
@@ -109,8 +102,6 @@ def sized_fig(ncols, nrows,
 
 def enforce_positions(axes, positions):
     """Set each axes to its designated position (run AFTER all plotting)."""
-    for ax_row in axes:
-        pass  # axes is a 2D list — positions indexed row-major
     flat = [axes[r][c] for r in range(len(axes)) for c in range(len(axes[0]))]
     for ax, pos in zip(flat, positions):
         ax.set_position(pos)
@@ -185,7 +176,6 @@ def plot_deconv_byconc(
     contrib_stack,
     S,
     N,
-    title_prefix,
     cfg,
     outline_totals=None,
     outline_err=None,
@@ -331,145 +321,6 @@ def plot_deconv_byconc(
         axes[r][c].axis('off')
 
     fig.supxlabel(f"Total Ligand Concentration ({cfg.output_unit})", fontsize=base_fontsize * 0.85)
-    fig.supylabel("Fraction", fontsize=base_fontsize * 0.85)
-    enforce_positions(axes, positions)
-    return fig
-
-
-def plot_deconv_byligand(
-    L_vals_out,
-    contrib_stack,
-    S,
-    N,
-    title_prefix,
-    cfg,
-    outline_totals=None,
-    outline_err=None,
-    outline_label="Frac_expt",
-    shared_legend=False,
-):
-    """Deconv plot with x-axis = ligand-bound state index I_i.
-
-    One subplot per ligand concentration; x-axis spans I_0..I_{S+N}; each
-    bar is stacked by the (j spec, i-j NSB) decomposition. Complements
-    `plot_deconv_byconc` (which flips the axes).
-
-    shared_legend=True: one combined legend in an extra panel at the end;
-    otherwise per-panel legends showing the significant components.
-    """
-    base_fontsize = cfg.base_fontsize
-    num_species = S + N + 1
-    x = np.arange(num_species)
-
-    n_panels = len(L_vals_out)
-    ncols = 3 if n_panels > 6 else (2 if n_panels > 1 else 1)
-    total_cells = n_panels + (1 if shared_legend else 0)
-    nrows = int(np.ceil(total_cells / ncols))
-    fig, axes, positions = sized_fig(ncols, nrows)
-    shared_handles = {}
-
-    for idx, L in enumerate(L_vals_out):
-        r, c = divmod(idx, ncols)
-        ax = axes[r][c]
-        seen = {}
-        bar_totals = np.zeros(num_species)  # total height per I_i bar, for legend placement
-        for i in range(num_species):
-            max_j = min(i, S)
-            bottom = 0.0
-            for j in range(max_j + 1):
-                v = contrib_stack[idx, i, j]
-                if v <= 0:
-                    continue
-                col = _deconv_color_by_count(j, i, S, N, cfg=cfg)
-                ax.bar(i, v, bottom=bottom, width=0.8, color=col, edgecolor='none')
-                bottom += v
-                m = i - j
-                key = (j, m)
-                if key not in seen or v > seen[key][1]:
-                    seen[key] = (col, v)
-                if v > 0.005:
-                    shared_handles[key] = Patch(facecolor=col, edgecolor='none', label=f"{j}S+{m}N")
-            bar_totals[i] = bottom
-        if outline_totals is not None:
-            ax.bar(x, outline_totals[idx], width=0.8,
-                   facecolor='none', edgecolor='black', linewidth=0.6)
-            if outline_err is not None and outline_err.shape[1] > 0:
-                ax.errorbar(x, outline_totals[idx], yerr=outline_err[idx],
-                            fmt='none', ecolor='black', elinewidth=0.8, capsize=2, alpha=0.9)
-
-        if not shared_legend:
-            sig = [(k, v) for k, v in seen.items() if v[1] > 0.005]
-            sig.sort(key=lambda item: (-item[0][0] / max(S, 1) if item[0][1] == 0
-                                       else item[0][1] / max(N, 1)))
-            panel_handles = [
-                Patch(facecolor=col, edgecolor='none', label=f"{j}S+{m}N")
-                for (j, m), (col, _) in sig
-            ]
-            if outline_totals is not None:
-                panel_handles.append(
-                    Patch(facecolor='none', edgecolor='black', label=outline_label))
-            # Place legend in upper-left or upper-right based on where bars peak;
-            # add headroom so the legend sits above the data, not on top of it.
-            if bar_totals.max() > 0:
-                center_of_mass = (bar_totals * np.arange(num_species)).sum() / bar_totals.sum()
-                loc = 'upper right' if center_of_mass < num_species / 2 else 'upper left'
-                ncol_leg = 2 if len(panel_handles) <= 10 else 3
-                n_rows_leg = int(np.ceil(len(panel_handles) / ncol_leg))
-                headroom = 1.0 + 0.09 * n_rows_leg
-                ax.set_ylim(0, bar_totals.max() * headroom)
-            else:
-                loc = 'upper right'
-                ncol_leg = 2
-            leg = ax.legend(
-                handles=panel_handles,
-                fontsize=base_fontsize * 0.5,
-                ncol=ncol_leg,
-                loc=loc,
-                frameon=True,
-                handlelength=1.0,
-                handletextpad=0.35,
-                columnspacing=0.7,
-            )
-            transparent_legend_frame(leg)
-        ax.set_xticks(x)
-        ax.set_xticklabels([f"$I_{{{ix}}}$" for ix in x], fontsize=base_fontsize * 0.6)
-        ax.tick_params(axis='y', labelsize=base_fontsize * 0.6)
-        ax.grid(True, axis='y', linestyle='--', alpha=0.4)
-
-    if shared_legend:
-        items = sorted(shared_handles.items(),
-                       key=lambda kv: (-kv[0][0] / max(S, 1) if kv[0][1] == 0
-                                       else kv[0][1] / max(N, 1)))
-        legend_handles = [p for (_, p) in items]
-        if outline_totals is not None:
-            legend_handles.append(Patch(facecolor='none', edgecolor='black', label=outline_label))
-        leg_cell = n_panels
-        r_leg, c_leg = divmod(leg_cell, ncols)
-        ax_leg = axes[r_leg][c_leg]
-        ax_leg.axis('off')
-        # Adaptive cols + font so the legend always fits inside the cell
-        n = len(legend_handles)
-        if n <= 8:
-            ncol_leg, fs_mult = 1, 0.55
-        elif n <= 16:
-            ncol_leg, fs_mult = 2, 0.45
-        elif n <= 28:
-            ncol_leg, fs_mult = 3, 0.38
-        else:
-            ncol_leg, fs_mult = 4, 0.32
-        leg = ax_leg.legend(handles=legend_handles, loc='center',
-                            fontsize=base_fontsize * fs_mult, ncol=ncol_leg,
-                            frameon=True, handlelength=0.8, handletextpad=0.3,
-                            columnspacing=0.6, labelspacing=0.25)
-        transparent_legend_frame(leg)
-        used_cells = n_panels + 1
-    else:
-        used_cells = n_panels
-    for cell in range(used_cells, nrows * ncols):
-        r, c = divmod(cell, ncols)
-        axes[r][c].axis('off')
-
-    fig.supxlabel("Bound state", fontsize=base_fontsize * 0.85)
     fig.supylabel("Fraction", fontsize=base_fontsize * 0.85)
     enforce_positions(axes, positions)
     return fig

@@ -39,7 +39,6 @@ defaults: # Shared settings for every system below.
   debug_index: 0 # Index of the point inspected by debug validation.
   debug_ligand_conc: 20 # Ligand concentration inspected by debug validation.
   debug_i_index: 1 # Bound-state index inspected by debug validation.
-  deconv_legend_loc: best # Legend position for deconvolution plots.
   show_kd_in_legend: false # Add fitted constants to specific-only plot legends.
 
   summary_enable: false # Combine replicate results; unnecessary for one CSV.
