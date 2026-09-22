@@ -1,19 +1,34 @@
 """Fit curves, convergence, summary, deconv bar plots."""
 from dataclasses import dataclass
-import numpy as np
+
 import matplotlib.pyplot as plt
+import numpy as np
 from matplotlib.patches import Patch
+
+from .figure_style import (
+    AXIS_LABEL_SIZE as SINGLE_AXIS_LABEL_SIZE,
+)
+from .figure_style import (
+    BASE_FONT_SIZE as SINGLE_BASE_FONT_SIZE,
+)
 from .figure_style import (
     FIGSIZE as SINGLE_FIGSIZE,
-    BASE_FONT_SIZE as SINGLE_BASE_FONT_SIZE,
-    AXIS_LABEL_SIZE as SINGLE_AXIS_LABEL_SIZE,
-    TICK_SIZE as SINGLE_TICK_SIZE,
+)
+from .figure_style import (
     LEGEND_SIZE as SINGLE_LEGEND_SIZE,
-    LINEWIDTH as SINGLE_LINEWIDTH,
+)
+from .figure_style import (
     LINE_ALPHA as SINGLE_LINE_ALPHA,
+)
+from .figure_style import (
+    LINEWIDTH as SINGLE_LINEWIDTH,
+)
+from .figure_style import (
+    TICK_SIZE as SINGLE_TICK_SIZE,
+)
+from .figure_style import (
     transparent_legend_frame,
 )
-
 
 GOLDEN = 1.618  # Subplot/figure width:height ratio for publication aesthetics.
 

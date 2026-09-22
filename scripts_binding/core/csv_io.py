@@ -1,7 +1,7 @@
 """Read common CSV encodings without silently replacing undecodable bytes."""
 
-from pathlib import Path
 import io
+from pathlib import Path
 
 import pandas as pd
 

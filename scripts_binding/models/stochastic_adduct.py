@@ -1,6 +1,7 @@
 """Stepwise-specific + Poisson NSB (hybrid, no paper). See MODELS.md §3.3, §8.4."""
-import numpy as np
 from math import factorial
+
+import numpy as np
 from scipy.optimize import brentq
 
 MODEL_NAME = "stochastic_adduct"

@@ -1,6 +1,7 @@
 """Daubenfeld 2006 binomial-specific + Poisson NSB. See MODELS.md §3.4."""
+from math import comb, factorial
+
 import numpy as np
-from math import factorial, comb
 from scipy.optimize import brentq
 
 MODEL_NAME = "shared_site"

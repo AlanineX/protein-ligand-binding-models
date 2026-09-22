@@ -1,9 +1,9 @@
 """RunConfig dataclass + YAML loader."""
-from dataclasses import dataclass, field
-from typing import Dict, List, Optional
-import yaml
 import os
+from dataclasses import dataclass, field, fields
 from pathlib import Path
+
+import yaml
 
 from scripts_binding.models.metadata import (
     canonicalize_model_list,
@@ -21,7 +21,7 @@ class RunConfig:
     base_dir: str = ""
     out_dir: str = ""
     csv_name_wildcard: str = ""
-    data_path: Optional[str] = None
+    data_path: str | None = None
 
     # --- Units ---
     input_unit: str = "M"
@@ -32,9 +32,9 @@ class RunConfig:
     # --- Model parameters ---
     s: int = 4
     s_mode: str = "auto"
-    n_override: Optional[int] = None
-    model_s_overrides: Dict[str, int] = field(default_factory=dict)
-    model_n_overrides: Dict[str, int] = field(default_factory=dict)
+    n_override: int | None = None
+    model_s_overrides: dict[str, int] = field(default_factory=dict)
+    model_n_overrides: dict[str, int] = field(default_factory=dict)
     auto_adjust_s: bool = True
     min_species_frac: float = 0.01
     trim_specific_low_pop: bool = True
@@ -43,29 +43,29 @@ class RunConfig:
     nsb_constraint_max_nfev: int = 2000
     nsb_constraint_fallback_to_unconstrained: bool = True
     nsb_constraint_log_margin: float = 1e-6
-    s_iteration_nsb_constraint_multistart_n: Optional[int] = None
-    s_iteration_nsb_constraint_max_nfev: Optional[int] = None
+    s_iteration_nsb_constraint_multistart_n: int | None = None
+    s_iteration_nsb_constraint_max_nfev: int | None = None
 
     # --- Models to run (names from models.REGISTRY) ---
-    models: List[str] = field(default_factory=lambda: ["sequential_specific", "sequential_adduct"])
+    models: list[str] = field(default_factory=lambda: ["sequential_specific", "sequential_adduct"])
     reference_model: str = "sequential_specific"
-    nested_ftest_models: List[str] = field(default_factory=lambda: [
+    nested_ftest_models: list[str] = field(default_factory=lambda: [
         "sequential_adduct",
         "competing_adduct",
         "stochastic_adduct",
         "occupancy_decay",
     ])
     ftest_alpha: float = 0.05
-    model_display_names: Dict[str, str] = field(default_factory=dict)
-    model_output_names: Dict[str, str] = field(default_factory=dict)
+    model_display_names: dict[str, str] = field(default_factory=dict)
+    model_output_names: dict[str, str] = field(default_factory=dict)
 
     # --- Deconvolution ---
     deconv_enable: bool = True
     deconv_source: str = "calc"
     deconv_use_grid: bool = False
     deconv_grid_points: int = 40
-    deconv_csv_path: Optional[str] = None
-    report_ligand_conc: List[float] = field(default_factory=lambda: [30])
+    deconv_csv_path: str | None = None
+    report_ligand_conc: list[float] = field(default_factory=lambda: [30])
 
     # --- Plot/Debug ---
     save_plots: bool = True
@@ -73,7 +73,7 @@ class RunConfig:
     plot_format: str = "svg"          # per-figure output format: "svg" or "png"
     debug_validate: bool = True
     debug_index: int = 0
-    debug_ligand_conc: Optional[float] = 30
+    debug_ligand_conc: float | None = 30
     debug_i_index: int = 4
     deconv_legend_loc: str = "best"
     show_kd_in_legend: bool = False
@@ -91,18 +91,18 @@ class RunConfig:
     compact_outputs: bool = False
     export_csv: bool = False
     report_uncertainty: bool = True
-    s_iteration_workbook_metrics: List[str] = field(default_factory=lambda: ["R2", "AICc", "p_value"])
+    s_iteration_workbook_metrics: list[str] = field(default_factory=lambda: ["R2", "AICc", "p_value"])
     s_iteration_workbook_p_value_mode: str = "threshold"
 
     # --- Run identity ---
     system_name: str = ""
-    temperature_C: Optional[int] = None
+    temperature_C: int | None = None
     # --- Rendering ---
     max_image_dim: int = 1800
     base_fontsize: int = 20
     colormap: str = "PRGn"
-    specific_colormap: Optional[str] = None
-    nonspecific_colormap: Optional[str] = None
+    specific_colormap: str | None = None
+    nonspecific_colormap: str | None = None
 
     # --- Derived (computed in __post_init__) ---
     scale_l_in_to_m: float = field(init=False, default=0.0)
@@ -129,7 +129,7 @@ class RunConfig:
         self.p_total_m = self.p_total_val * self.scale_p_in_to_m
 
 
-def load_configs(yaml_path: str) -> List[RunConfig]:
+def load_configs(yaml_path: str) -> list[RunConfig]:
     """One RunConfig per (system, temperature) pair from a YAML with 'defaults' + 'systems'."""
     config_dir = Path(yaml_path).resolve().parent
     with open(yaml_path, encoding="utf-8-sig") as f:
@@ -152,7 +152,7 @@ def load_configs(yaml_path: str) -> List[RunConfig]:
 
         # Merge: defaults < system-level overrides
         merged = {**defaults, **sys_cfg}
-        valid_keys = {f.name for f in RunConfig.__dataclass_fields__.values() if f.init}
+        valid_keys = {f.name for f in fields(RunConfig) if f.init}
         unknown = set(merged) - valid_keys
         if unknown:
             raise ValueError(f"Unknown configuration keys: {', '.join(sorted(unknown))}")

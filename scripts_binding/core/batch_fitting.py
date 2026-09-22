@@ -1,9 +1,13 @@
 """Reusable batch fitting helpers for Kd scans and showcase workflows."""
 
 import os
+
 import numpy as np
 import pandas as pd
 
+from scripts_binding.core.bootstrap import bootstrap_fit, format_kd_ci
+from scripts_binding.core.config import RunConfig
+from scripts_binding.core.fitting import _least_squares_fit, load_binding_csv
 from scripts_binding.models import REGISTRY
 from scripts_binding.models.metadata import (
     base_model_name,
@@ -11,9 +15,6 @@ from scripts_binding.models.metadata import (
     normalize_model_name,
     parameter_values_from_optimizer,
 )
-from scripts_binding.core.fitting import _least_squares_fit, load_binding_csv
-from scripts_binding.core.config import RunConfig
-from scripts_binding.core.bootstrap import bootstrap_fit, format_kd_ci
 
 
 def _load_titration(path):
@@ -73,7 +74,7 @@ def fit_one(model, L_totals, F_exps, P_tot, S, N, max_nfev=5000, cfg=None):
         sv = np.linalg.svd(res.jac, compute_uv=False)
         rank_eff = int(np.sum(sv > sv[0] * 1e-8)) if sv[0] > 0 else 0
         rank_full = len(sv)
-    except Exception:
+    except (np.linalg.LinAlgError, IndexError):
         rank_eff, rank_full = -1, len(res.x)
     return res, ssr, bic(ssr, n_obs, model.n_params(S)), rank_eff, rank_full
 
@@ -105,7 +106,7 @@ def _fit_job(args):
             "labels": labels, "values": values,
             "boot": boot,
         }
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001 - return a failed job without stopping the batch
         return {
             "ok": False, "buffer": buffer_name, "temp": T, "rep": R,
             "model_name": model_name, "csv_path": csv_path,

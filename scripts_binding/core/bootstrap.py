@@ -5,12 +5,13 @@ within the bootstrap loop are counted but excluded from quantile reporting.
 Returns Jacobian-based and bootstrap-based summaries side-by-side, so the
 caller can flag disagreement.
 """
+import warnings
+
 import numpy as np
 
 from ..models.metadata import parameter_values_from_optimizer
 from .config import RunConfig
 from .fitting import _least_squares_fit
-
 
 _MIN_N_DATA = 5
 
@@ -39,6 +40,7 @@ def bootstrap_fit(model, L_totals, F_exps, P_tot, S, N, n_boot=200, seed=None, c
     labels = model.param_labels(S)
     samples = {lbl: [] for lbl in labels}
     n_success = 0
+    failures = {}
 
     for _ in range(n_boot):
         idx = rng.choice(n, size=n, replace=True)
@@ -52,8 +54,12 @@ def bootstrap_fit(model, L_totals, F_exps, P_tot, S, N, n_boot=200, seed=None, c
             for lbl, val in zip(labels, parameter_values_from_optimizer(labels, lnK_opt)):
                 samples[lbl].append(val)
             n_success += 1
-        except Exception:
-            pass
+        except Exception as exc:  # noqa: BLE001 - retain successful bootstrap draws
+            name = type(exc).__name__
+            failures[name] = failures.get(name, 0) + 1
+
+    if failures:
+        warnings.warn(f"Bootstrap skipped failed fits: {failures}", RuntimeWarning, stacklevel=2)
 
     out = {}
     for lbl, vals in samples.items():

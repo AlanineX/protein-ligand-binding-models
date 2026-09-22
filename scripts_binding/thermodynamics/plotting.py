@@ -5,20 +5,22 @@ safe_savefig so these plots look visually consistent with the Kd-side deconv
 and mole-fraction plots.
 """
 import colorsys
-import numpy as np
+
 import matplotlib
+import numpy as np
+
 matplotlib.use("Agg")
 import matplotlib.colors as mcolors
 import matplotlib.pyplot as plt
-from matplotlib.ticker import AutoMinorLocator, MaxNLocator, MultipleLocator
+from matplotlib.ticker import AutoMinorLocator, MaxNLocator
 
 from ..core.plotting import (
     PlotConfig,
-    golden_figsize,
     _diverging_colors,
+    golden_figsize,
     safe_savefig,
 )
-from .nlvh import nlvh_equation, lvh_equation
+from .nlvh import lvh_equation, nlvh_equation
 
 
 def _muted(hex_color, sat_scale=0.85, l_shift=0.02):
@@ -82,27 +84,27 @@ PALETTE_PRESETS = {
 # the enthalpy/entropy bars dominate visually), PL5 green (fig1f PL5 fill,
 # PL10 outline) and PL4 purple (fig1f PL4 fill, PRGn 0.1 outline).
 PAPER_V2_BAR_STYLE = {
-    "dG":  dict(alpha=0.25, edgecolor="#000000", lw=1.25),
-    "dH":  dict(alpha=1.0,  edgecolor="#89ca88", lw=1.5),  # edge = fill (PL7)
-    "TdS": dict(alpha=1.0,  edgecolor="#b18fc0", lw=1.5),  # edge = fill (PL2)
+    "dG":  {"alpha": 0.25, "edgecolor": "#000000", "lw": 1.25},
+    "dH":  {"alpha": 1.0,  "edgecolor": "#89ca88", "lw": 1.5},  # edge = fill (PL7)
+    "TdS": {"alpha": 1.0,  "edgecolor": "#b18fc0", "lw": 1.5},  # edge = fill (PL2)
 }
 
 HARMONIOUS_BAR_STYLE = {
-    "dG":  dict(alpha=0.80, edgecolor=plt.get_cmap("Spectral")(0.80)[:3], lw=1.0),
-    "dH":  dict(alpha=0.80, edgecolor=plt.get_cmap("Spectral")(0.90)[:3], lw=1.0),
-    "TdS": dict(alpha=0.80, edgecolor=plt.get_cmap("Spectral")(0.10)[:3], lw=1.0),
+    "dG":  {"alpha": 0.80, "edgecolor": plt.get_cmap("Spectral")(0.80)[:3], "lw": 1.0},
+    "dH":  {"alpha": 0.80, "edgecolor": plt.get_cmap("Spectral")(0.90)[:3], "lw": 1.0},
+    "TdS": {"alpha": 0.80, "edgecolor": plt.get_cmap("Spectral")(0.10)[:3], "lw": 1.0},
 }
 
 CRISP_FOCUS_BAR_STYLE = {
-    "dG":  dict(alpha=0.72, edgecolor="darkgreen", lw=1.0),
-    "dH":  dict(alpha=0.72, edgecolor="cornflowerblue", lw=1.0),
-    "TdS": dict(alpha=0.72, edgecolor="salmon", lw=1.0),
+    "dG":  {"alpha": 0.72, "edgecolor": "darkgreen", "lw": 1.0},
+    "dH":  {"alpha": 0.72, "edgecolor": "cornflowerblue", "lw": 1.0},
+    "TdS": {"alpha": 0.72, "edgecolor": "salmon", "lw": 1.0},
 }
 
 TAB_RGB_BAR_STYLE = {
-    "dG":  dict(alpha=0.72, edgecolor="black", lw=1.5),
-    "dH":  dict(alpha=0.72, edgecolor="none", lw=0.0),
-    "TdS": dict(alpha=0.72, edgecolor="none", lw=0.0),
+    "dG":  {"alpha": 0.72, "edgecolor": "black", "lw": 1.5},
+    "dH":  {"alpha": 0.72, "edgecolor": "none", "lw": 0.0},
+    "TdS": {"alpha": 0.72, "edgecolor": "none", "lw": 0.0},
 }
 
 
@@ -202,7 +204,7 @@ def _bar_style(palette, channel, default_alpha, fill_hex):
         edge = "black"
         lw = 0.5
     facecolor = mcolors.to_rgba(fill_hex, a)
-    return dict(facecolor=facecolor, edgecolor=edge, lw=lw)
+    return {"facecolor": facecolor, "edgecolor": edge, "lw": lw}
 
 
 def plot_vanthoff(
@@ -264,7 +266,6 @@ def plot_vanthoff(
         ax = axes[r][c]
         nl = nlvh_rows.get(si_num)
         lv = lvh_rows.get(si_num)
-        ref = nl or lv
         si = si_num - 1
         y = lnKa_mean[:, si]
         if show_kd:
@@ -447,7 +448,7 @@ def _segment_height_ratios(segments):
 
 def _draw_break_marks(ax_upper, ax_lower, upper_ratio, lower_ratio):
     d = 0.012
-    kwargs = dict(color="black", clip_on=False, lw=0.9)
+    kwargs = {"color": "black", "clip_on": False, "lw": 0.9}
     up_scale = lower_ratio / upper_ratio
     lo_scale = upper_ratio / lower_ratio
     for x in (-0.018, 1.018):
@@ -521,7 +522,7 @@ def plot_thermo_bars(df, output_path, N, method, cfg=None, title="",
     x = np.arange(n)
     width = 0.22
     base = cfg.base_fontsize
-    ec = dict(capsize=3, elinewidth=1.0, markeredgewidth=1.0)
+    ec = {"capsize": 3, "elinewidth": 1.0, "markeredgewidth": 1.0}
     offset = width * 1.30  # slightly wider gaps between dG, dH, and -TdS
     vals = np.concatenate([
         sub["dG_kJmol"].to_numpy(dtype=float),
@@ -557,7 +558,7 @@ def plot_thermo_bars(df, output_path, N, method, cfg=None, title="",
     fig, axes = plt.subplots(
         len(segments), 1, sharex=True,
         figsize=(fig_w, fig_h),
-        gridspec_kw=dict(height_ratios=ratios, hspace=0.07),
+        gridspec_kw={"height_ratios": ratios, "hspace": 0.07},
     )
     axes = np.atleast_1d(axes)
     for idx, (ax, (ymin, ymax, _kind)) in enumerate(zip(axes, segments)):
@@ -584,4 +585,4 @@ def plot_thermo_bars(df, output_path, N, method, cfg=None, title="",
 
 # Make pandas importable here so plot_thermo_bars can use pd.to_numeric without
 # forcing the top-level module to import pandas when only plot_vanthoff is used.
-import pandas as pd  # noqa: E402
+import pandas as pd

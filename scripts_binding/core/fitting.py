@@ -2,13 +2,12 @@
 import os
 import re
 import sys
+
 import numpy as np
 import pandas as pd
-from .csv_io import read_csv
 from scipy.optimize import OptimizeResult, least_squares
 
-from ..models import REGISTRY, deconvolve_terms
-from ..models import sequential_adduct
+from ..models import REGISTRY, deconvolve_terms, sequential_adduct
 from ..models.metadata import (
     DEFAULT_NSB_MODELS,
     base_model_name,
@@ -17,10 +16,11 @@ from ..models.metadata import (
     normalize_model_name,
     output_model_name,
 )
+from .csv_io import read_csv
 from .reporting import (
+    print_per_point_summary,
     print_results_table,
     save_kd_csv,
-    print_per_point_summary,
 )
 
 # Conservative log-space Ka bounds: Kd ∈ [~10 fM, ~10 M] (plus slack).
@@ -318,6 +318,7 @@ def _least_squares_fit(model, model_name, lnK0, L_totals_M, P_tot_M, F_exps, S, 
         return res
 
     starts = []
+    invalid_starts = 0
     for raw in [lnK0, *_constrained_initial_raws(model_name, S, max_starts)]:
         try:
             theta = transform.to_theta(raw)
@@ -325,18 +326,21 @@ def _least_squares_fit(model, model_name, lnK0, L_totals_M, P_tot_M, F_exps, S, 
             theta = np.clip(theta, lo + 1e-9, hi - 1e-9)
             if transform.is_raw_valid(transform.to_raw(theta)):
                 starts.append(theta)
-        except Exception:
+        except (ValueError, OverflowError):
+            invalid_starts += 1
             continue
         if len(starts) >= max_starts:
             break
     if not starts:
         starts = [np.clip(transform.to_theta(lnK0), theta_bounds[0] + 1e-9, theta_bounds[1] - 1e-9)]
+    if invalid_starts:
+        print(f"[NSB starts] skipped {invalid_starts} invalid initializations")
 
     candidates = []
     for idx, theta0 in enumerate(starts):
         history = []
         fit_try = least_squares(
-            lambda theta: residual(theta, history),
+            lambda theta, local_history=history: residual(theta, local_history),
             theta0,
             bounds=theta_bounds,
             max_nfev=constrained_max_nfev,
@@ -485,11 +489,11 @@ def fit_quick(model, L_totals_M, F_exps, P_tot_M, S, N, cfg=None):
     n_obs_valid = int(np.sum(~np.isnan(F_exps_padded)))
 
     try:
-        fit, lnK_opt, ssr_history, _transform, n_starts = _least_squares_fit(
+        fit, lnK_opt, _ssr_history, _transform, n_starts = _least_squares_fit(
             model, model.MODEL_NAME, model.initial_lnK(S),
             L_totals_M, P_tot_M, F_exps_padded, S, N, cfg, verbose=0,
         )
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001 - scan the remaining site counts
         print(f"  [Auto-S] S={S} failed: {e}")
         return None
 
@@ -505,7 +509,7 @@ def fit_quick(model, L_totals_M, F_exps, P_tot_M, S, N, cfg=None):
 def auto_select_S(data_path, cfg, model_name):
     """Return S ∈ 0..max_i with lowest BIC for the given model."""
     model = REGISTRY[base_model_name(model_name)]
-    df, L_totals_M, I_cols, F_exps = load_binding_csv(data_path, cfg)
+    _df, L_totals_M, I_cols, F_exps = load_binding_csv(data_path, cfg)
     max_i = len(I_cols) - 1
 
     print(f"\n{'='*60}")
@@ -513,7 +517,7 @@ def auto_select_S(data_path, cfg, model_name):
     print(f"{'='*60}")
 
     results = []
-    for S in range(0, max_i + 1):
+    for S in range(max_i + 1):
         info = fit_quick(model, L_totals_M, F_exps, cfg.p_total_m, S, max_i - S, cfg)
         if info is not None:
             results.append(info)
@@ -735,7 +739,7 @@ def fit_file(data_path, out_dir, cfg, model_name, S_override=None):
     # Jacobian rank check — flag unidentifiable fits
     try:
         sv = np.linalg.svd(fit.jac, compute_uv=False)
-        if sv[0] > 0:
+        if sv.size and sv[0] > 0:
             rank_eff = int(np.sum(sv > sv[0] * 1e-8))
             cond = sv[0] / max(sv[-1], sv[0] * 1e-300)
             if rank_eff < len(sv):
@@ -744,8 +748,8 @@ def fit_file(data_path, out_dir, cfg, model_name, S_override=None):
                       f"Kd values for unidentified parameters are not meaningful. "
                       f"Consider running scripts/batch_kd_scan.py with --bootstrap 200 "
                       f"to quantify identifiability via row-resampling.")
-    except Exception:
-        pass
+    except np.linalg.LinAlgError as exc:
+        print(f"[FitQualityWarning] Jacobian rank check failed: {exc}")
 
     print_results_table(
         param_names, lnK_opt, Ka_opt_M, Kd_opt_M, has_errors, cfg,
@@ -832,7 +836,8 @@ def plot_fit_results(info, cfg):
 
     # Imports deferred so pure fitting paths don't touch matplotlib.
     import matplotlib.pyplot as plt
-    from .plotting import safe_savefig, plot_species_curves, plot_deconv_byconc
+
+    from .plotting import plot_deconv_byconc, plot_species_curves, safe_savefig
 
     model = REGISTRY[base_model_name(info["model_name"])]
     is_specific = is_sequential_specific_model(info["model_name"])

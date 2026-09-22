@@ -1,10 +1,12 @@
 """Load replicate or uncertainty-weighted Kd temperature-series CSVs."""
 
 import csv
-import numpy as np
-from pathlib import Path
-from scripts_binding.core.csv_io import decode_csv
 import io
+from pathlib import Path
+
+import numpy as np
+
+from scripts_binding.core.csv_io import decode_csv
 
 
 def _is_uncertainty_header(h):

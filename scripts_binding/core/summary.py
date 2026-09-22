@@ -2,11 +2,11 @@
 import json
 import os
 import re
-from datetime import datetime
+from datetime import datetime, timezone
 
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
 
 from ..models import REGISTRY, deconvolve_terms
 from ..models.metadata import (
@@ -18,7 +18,7 @@ from ..models.metadata import (
     model_role,
     output_parameter_name,
 )
-from .plotting import safe_savefig, plot_species_curves, plot_deconv_byconc
+from .plotting import plot_deconv_byconc, plot_species_curves, safe_savefig
 
 
 def _nanmean_no_warn(values, axis):
@@ -334,7 +334,6 @@ def _build_fit_parameters(per_model_results, cfg):
             labels = d.get("param_names", [])
             values = d.get("param_values", [])
             kd_vals = d.get("Kd_out", [])
-            std_param = d.get("std_param")
             std_kd = d.get("std_Kd_out")
             if std_kd is None:
                 std_kd = d.get("e_Kd_uM", [])
@@ -342,7 +341,6 @@ def _build_fit_parameters(per_model_results, cfg):
                 is_dimless = is_dimensionless_param(label)
                 parameter_value = values[idx] if idx < len(values) else np.nan
                 kd_uM = kd_vals[idx] if idx < len(kd_vals) else np.nan
-                se_log = std_param[idx] if std_param is not None and idx < len(std_param) else np.nan
                 if is_dimless:
                     se_kd_uM = np.nan
                     sd_kd_uM = np.nan
@@ -745,7 +743,7 @@ def _write_summary_report(out_dir, fit_metrics, fit_parameters, nested_ftests, c
     finite_params = fp_work[np.isfinite(fp_work["Kd_uM"])]
     for keys, sub in finite_params.groupby(["model_name", "parameter_name"], dropna=False):
         model_name, pname = keys
-        tags = sorted(set(_parameter_warning_tags(r) for _, r in sub.iterrows()))
+        tags = sorted({_parameter_warning_tags(r) for _, r in sub.iterrows()})
         param_rows.append({
                     "model_name": model_name,
                     "parameter_name": _output_parameter_label(pname),
@@ -851,7 +849,7 @@ def _write_summary_report(out_dir, fit_metrics, fit_parameters, nested_ftests, c
 
     warnings.extend(["", "### Interpretation"])
     if bool(getattr(cfg, "constrain_nsb_weaker_than_specific", True)):
-        warnings.extend([
+        warnings.extend([(
             "NSB candidate fits used the default biological constraint "
             "that the nonspecific dissociation constant must be weaker than "
             "the fitted specific constants: $K_{d,n}$ is constrained to be "
@@ -860,12 +858,14 @@ def _write_summary_report(out_dir, fit_metrics, fit_parameters, nested_ftests, c
             "the specific association terms and $\\gamma \\ge 0$. If no "
             "constrained start converges within `nsb_constraint_max_nfev`, "
             "the fit is rerun without the NSB constraint when "
-            "`nsb_constraint_fallback_to_unconstrained: true`.",
+            "`nsb_constraint_fallback_to_unconstrained: true`."
+        ),
         ])
     else:
-        warnings.extend([
+        warnings.extend([(
             "NSB candidate fits were run without the default "
-            "$K_{d,n}$-weaker-than-specific constraint.",
+            "$K_{d,n}$-weaker-than-specific constraint."
+        ),
         ])
 
     reference = getattr(cfg, "reference_model", "sequential_specific")
@@ -927,7 +927,7 @@ def _write_manifest(out_dir, per_model_results, cfg, workbook_path, report_path)
         if d.get("data_path")
     })
     manifest = {
-        "generated_at": datetime.now().isoformat(timespec="seconds"),
+        "generated_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         "output_version": "compact_all_models_v3",
         "system_name": getattr(cfg, "system_name", ""),
         "base_dir": os.path.abspath(cfg.base_dir),
@@ -1219,11 +1219,8 @@ def compare_models_bic_aic(per_model_results, out_dir, cfg=None):
     pd.DataFrame(param_rows).to_csv(params_path, index=False, float_format="%.6e")
 
     # --- replicate-averaged summary (one row per model) ---
-    mean_k = {nm: int(round(np.mean([d["n_params"] for d in per_model_results[nm]])))
+    mean_k = {nm: round(np.mean([d["n_params"] for d in per_model_results[nm]]))
               for nm in model_names}
-    mean_ssr = {nm: float(np.mean([d["SSR"] for d in per_model_results[nm]]))
-                for nm in model_names}
-    n_obs_common = per_model_results[model_names[0]][0]["n_obs"]
 
     summ_rows = []
     for name in model_names:

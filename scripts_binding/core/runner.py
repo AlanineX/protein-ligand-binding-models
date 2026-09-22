@@ -1,20 +1,24 @@
 """CLI entry: python -m scripts_binding <config.yaml>."""
+import argparse
 import os
 import shutil
 import sys
-import argparse
-from pathlib import Path
 from contextlib import contextmanager
 from glob import glob
+from pathlib import Path
 
 import numpy as np
 
-from .config import load_configs
-from .plotting import setup_matplotlib
-from .fitting import fit_file, plot_fit_results, auto_select_S
-from .summary import build_summary, build_deconv_summary, compare_models_bic_aic
 from ..models import REGISTRY
-from ..models.metadata import base_model_name, is_sequential_specific_model, output_model_name
+from ..models.metadata import (
+    base_model_name,
+    is_sequential_specific_model,
+    output_model_name,
+)
+from .config import load_configs
+from .fitting import auto_select_S, fit_file, plot_fit_results
+from .plotting import setup_matplotlib
+from .summary import build_deconv_summary, build_summary, compare_models_bic_aic
 
 
 class TeeLogger:
@@ -96,9 +100,7 @@ def _prepare_compact_output_dir(cfg):
     for name in os.listdir(cfg.out_dir):
         path = os.path.join(cfg.out_dir, name)
         if os.path.isfile(path) and (
-            name.endswith(".csv")
-            or name.endswith(".xlsx")
-            or name in {"summary_report.md", "run_manifest.json", "model_comparison_log.txt"}
+            name.endswith((".csv", ".xlsx")) or name in {"summary_report.md", "run_manifest.json", "model_comparison_log.txt"}
         ):
             os.remove(path)
 
@@ -127,7 +129,7 @@ def _run_model(model_name, data_paths, cfg):
             results.append(info)
 
         if cfg.summary_enable and results:
-            ref_L, F_exp_mean, F_exp_std, _, mean_Kd_out, num_species = build_summary(
+            ref_L, F_exp_mean, F_exp_std, _, _mean_Kd_out, num_species = build_summary(
                 all_L_tot=[r["L_totals_M"] for r in results],
                 all_F_exp=[r["F_exps"] for r in results],
                 all_Kd=[r["Kd_out"] for r in results],

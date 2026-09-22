@@ -6,11 +6,11 @@ import sys
 
 import numpy as np
 import pandas as pd
-from scripts_binding.core.csv_io import read_csv
 
+from scripts_binding.core.config import UNIT_MAP, RunConfig
+from scripts_binding.core.csv_io import read_csv
+from scripts_binding.core.plotting import plot_species_curves, setup_matplotlib
 from scripts_binding.models import REGISTRY
-from scripts_binding.core.config import RunConfig, UNIT_MAP
-from scripts_binding.core.plotting import setup_matplotlib, plot_species_curves
 from scripts_binding.models.metadata import base_model_name, normalize_model_name
 
 
@@ -137,13 +137,13 @@ def main():
             continue
         try:
             lnK, S, N = _build_lnK(rows, REGISTRY[base_model_name(model_name)])
-            svg, csv = simulate_one(model_name, lnK, S, N, cfg,
+            svg, _csv = simulate_one(model_name, lnK, S, N, cfg,
                                     L_grid_M, tick_L_M, args.out_dir, label,
                                     write_csv=args.csv,
                                     x_tick_rotation=args.x_tick_rotation,
                                     ladder_markers=args.ladder_markers)
             print(f"[simulate] {label} ({model_name}, S={S}, N={N}) -> {svg}")
-        except Exception as exc:
+        except Exception as exc:  # noqa: BLE001 - continue other parameter sets
             print(f"[simulate] {label}: {type(exc).__name__}: {exc} — skipped")
             failed.append(label)
     if failed:

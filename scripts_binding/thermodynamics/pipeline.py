@@ -1,13 +1,13 @@
 """Thermodynamic fits from temperature-dependent Kd tables."""
-import os
-from pathlib import Path
+import warnings
 from itertools import product
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
 
 from .loader import load_kd_csv
-from .nlvh import statistical_correction, fit_nlvh, fit_lvh, R_KJ
+from .nlvh import fit_lvh, fit_nlvh, statistical_correction
 
 
 def _reorder_sites_kn_last(data):
@@ -139,13 +139,6 @@ def run_analysis(data, N, method, ref_temp_C=25.0, error_mode="covariance"):
                 elif len(valid) == 1:
                     lnKa_std[ti, si] = 0.0
 
-    # Index of the reference temperature (for e_dG propagation)
-    t0_idx = None
-    for ti, tc in enumerate(temps_C):
-        if abs(tc - ref_temp_C) < 0.01:
-            t0_idx = ti
-            break
-
     if error_mode not in ("covariance", "replicate", "sd"):
         raise ValueError(
             f"error_mode must be 'covariance', 'replicate', or 'sd', got {error_mode!r}"
@@ -168,7 +161,8 @@ def run_analysis(data, N, method, ref_temp_C=25.0, error_mode="covariance"):
                 continue
             try:
                 res = fit_func(temps_K[mask], y[mask], None, T0)
-            except Exception:
+            except Exception as exc:  # noqa: BLE001 - continue other replicates
+                warnings.warn(f"Site {si + 1} replicate {ri + 1} fit failed: {exc}", RuntimeWarning, stacklevel=2)
                 continue
             rep_fits.append(res)
             rows.append({
@@ -193,7 +187,8 @@ def run_analysis(data, N, method, ref_temp_C=25.0, error_mode="covariance"):
             continue
         try:
             mf = fit_func(temps_K[mask_m], y_m[mask_m], yerr_m[mask_m], T0)
-        except Exception:
+        except Exception as exc:  # noqa: BLE001 - continue other sites
+            warnings.warn(f"Site {si + 1} mean fit failed: {exc}", RuntimeWarning, stacklevel=2)
             continue
 
         if error_mode == "covariance":

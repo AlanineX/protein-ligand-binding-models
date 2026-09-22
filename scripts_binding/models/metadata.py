@@ -4,7 +4,6 @@ import re
 
 import numpy as np
 
-
 DISPLAY_MODEL_NAMES = {
     "sequential_specific": "Sequential-specific",
     "sequential_adduct": "Sequential-adduct",

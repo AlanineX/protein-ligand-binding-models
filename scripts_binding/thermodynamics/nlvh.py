@@ -75,10 +75,10 @@ def _derived_at_T0(dH, dS, T0, var_dH, var_dS, cov_dH_dS):
 
     Kd_uM = (1.0 / np.exp(lnK0)) * 1e6
 
-    return dict(dG=dG, e_dG=e_dG,
-                minus_TdS=minus_TdS, e_minus_TdS=e_minus_TdS,
-                lnK0=lnK0, e_lnK0=e_lnK0,
-                Kd_uM=Kd_uM)
+    return {"dG": dG, "e_dG": e_dG,
+                "minus_TdS": minus_TdS, "e_minus_TdS": e_minus_TdS,
+                "lnK0": lnK0, "e_lnK0": e_lnK0,
+                "Kd_uM": Kd_uM}
 
 
 def _gof_metrics(y_obs, y_pred, lnKa_err, k):
@@ -129,7 +129,7 @@ def fit_lvh(T_arr, lnKa_arr, lnKa_err, T0):
     if (lnKa_err is not None
             and np.all(np.isfinite(lnKa_err))
             and np.all(lnKa_err > 0)):
-        sigma_kw = dict(sigma=lnKa_err, absolute_sigma=True)
+        sigma_kw = {"sigma": lnKa_err, "absolute_sigma": True}
 
     popt, pcov = curve_fit(lvh_equation, T_arr, lnKa_arr,
                            p0=[dH_init, dS_init], **sigma_kw)
@@ -177,7 +177,7 @@ def fit_nlvh(T_arr, lnKa_arr, lnKa_err, T0):
     if (lnKa_err is not None
             and np.all(np.isfinite(lnKa_err))
             and np.all(lnKa_err > 0)):
-        sigma_kw = dict(sigma=lnKa_err, absolute_sigma=True)
+        sigma_kw = {"sigma": lnKa_err, "absolute_sigma": True}
 
     popt, pcov = curve_fit(_model, T_arr, lnKa_arr,
                            p0=[dH_init, dS_init, Cp_init], **sigma_kw)

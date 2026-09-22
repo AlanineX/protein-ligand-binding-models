@@ -1,12 +1,13 @@
 """Binding-model registry."""
 
-from . import competing_adduct
-from . import occupancy_decay
-from . import sequential_adduct
-from . import sequential_specific
-from . import shared_site
-from . import stochastic_adduct
-
+from . import (
+    competing_adduct,
+    occupancy_decay,
+    sequential_adduct,
+    sequential_specific,
+    shared_site,
+    stochastic_adduct,
+)
 
 REGISTRY = {
     sequential_specific.MODEL_NAME: sequential_specific,

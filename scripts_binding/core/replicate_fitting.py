@@ -1,19 +1,28 @@
 """Weighted fitting of pooled replicate bound-state fractions."""
 from __future__ import annotations
-from pathlib import Path
 
 import numpy as np
 from scipy.optimize import least_squares
 
 from ..models import REGISTRY
-from ..models.metadata import base_model_name, is_dimensionless_param, is_sequential_specific_model, ka_kd_from_optimizer
-from .fitting import (
-    load_binding_csv, _param_bounds, _resolve_S_N, _trim_low_pop_species,
-    _nan_pad, _constrain_nsb_for_model, _NsbWeakerThanSpecificTransform,
-    _constrained_initial_raws, _nsb_constraint_max_nfev,
-    _nsb_constraint_fallback_to_unconstrained,
+from ..models.metadata import (
+    base_model_name,
+    is_dimensionless_param,
+    is_sequential_specific_model,
+    ka_kd_from_optimizer,
 )
-
+from .fitting import (
+    _constrain_nsb_for_model,
+    _constrained_initial_raws,
+    _nan_pad,
+    _nsb_constraint_fallback_to_unconstrained,
+    _nsb_constraint_max_nfev,
+    _NsbWeakerThanSpecificTransform,
+    _param_bounds,
+    _resolve_S_N,
+    _trim_low_pop_species,
+    load_binding_csv,
+)
 
 # Floor for the per-cell SE so 1/σ doesn't blow up when reps agree closely.
 # F_i is a mole fraction in [0, 1]. The floor of 1% reflects the realistic
@@ -60,7 +69,7 @@ def _pool_replicates(rep_csv_paths, cfg, model_name, S_override=None):
     """Pool measurements on their observed concentration grid and compute means and SEs."""
     rep_data = []
     for path in rep_csv_paths:
-        df, L_totals_M, I_cols, F_exps = load_binding_csv(path, cfg)
+        _df, L_totals_M, I_cols, F_exps = load_binding_csv(path, cfg)
         if is_sequential_specific_model(model_name):
             F_exps, I_cols = _trim_low_pop_species(F_exps, I_cols, cfg.min_species_frac)
         rep_data.append((np.asarray(L_totals_M), np.asarray(F_exps), list(I_cols)))
@@ -86,7 +95,6 @@ def _pool_replicates(rep_csv_paths, cfg, model_name, S_override=None):
 
     # Per-cell n_valid, mean, and SE/√n_valid across the reps that actually
     # measured at each cell. Use ddof=1; require ≥2 valid reps for SE.
-    n_valid = np.sum(~np.isnan(projected), axis=0)          # (n_L, n_species)
     F_mean = np.nanmean(projected, axis=0)
 
     F_se = np.full_like(F_mean, np.nan)
@@ -176,7 +184,8 @@ def fit_replicates_weighted(rep_csv_paths, model_name, cfg, S_override=None):
                 theta = np.clip(theta, lo + 1e-9, hi - 1e-9)
                 if transform.is_raw_valid(transform.to_raw(theta)):
                     starts.append(theta)
-            except Exception:
+            except (ValueError, OverflowError) as exc:
+                print(f"[NSB start] skipped invalid initialization: {exc}")
                 continue
             if len(starts) >= max_starts:
                 break
@@ -193,7 +202,7 @@ def fit_replicates_weighted(rep_csv_paths, model_name, cfg, S_override=None):
         for theta0 in starts:
             local_history = []
 
-            def residual_with_local_history(theta):
+            def residual_with_local_history(theta, local_history=local_history):
                 before = len(history)
                 res = constrained_residual(theta)
                 local_history.extend(history[before:])
