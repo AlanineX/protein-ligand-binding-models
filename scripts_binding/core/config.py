@@ -142,8 +142,21 @@ def load_configs(yaml_path: str) -> list[RunConfig]:
         if not base_dir.is_absolute():
             base_dir = config_dir / base_dir
         base_dir = str(base_dir.resolve())
-        wildcard_fmt = sys_cfg.pop("wildcard_fmt", "*.csv")
-        out_fmt = sys_cfg.pop("out_fmt", "output_qS_{t}C")
+        csv_pattern = sys_cfg.pop("csv_pattern", None)
+        old_csv_pattern = sys_cfg.pop("wildcard_fmt", None)
+        if csv_pattern is not None and old_csv_pattern is not None:
+            raise ValueError("Use csv_pattern or wildcard_fmt, not both")
+        csv_pattern = csv_pattern if csv_pattern is not None else old_csv_pattern
+        if csv_pattern is None:
+            csv_pattern = "*.csv"
+
+        output_folder = sys_cfg.pop("output_folder", None)
+        old_output_folder = sys_cfg.pop("out_fmt", None)
+        if output_folder is not None and old_output_folder is not None:
+            raise ValueError("Use output_folder or out_fmt, not both")
+        output_folder = output_folder if output_folder is not None else old_output_folder
+        if output_folder is None:
+            output_folder = "output_qS_{t}C"
 
         # Merge: defaults < system-level overrides
         merged = {**defaults, **sys_cfg}
@@ -153,8 +166,8 @@ def load_configs(yaml_path: str) -> list[RunConfig]:
             raise ValueError(f"Unknown configuration keys: {', '.join(sorted(unknown))}")
 
         for t in temps:
-            wildcard = wildcard_fmt.format(t=t)
-            out_dir = os.path.join(base_dir, out_fmt.format(t=t))
+            wildcard = csv_pattern.format(t=t)
+            out_dir = os.path.join(base_dir, output_folder.format(t=t))
 
             cfg_dict = {
                 **merged,

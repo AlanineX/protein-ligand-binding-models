@@ -1,5 +1,5 @@
 defaults: # Shared settings for every system below.
-  models: [sequential_specific] # Model IDs to fit; see README for available models.
+  models: [sequential_specific] # Options: sequential_specific, sequential_adduct, competing_adduct, stochastic_adduct, occupancy_decay, shared_site.
   input_unit: uM # Unit of the CSV Entry concentration column.
   output_unit: uM # Unit used for fitted constants and plot axes.
   p_total_val: 1.0 # Total protein concentration.
@@ -57,7 +57,7 @@ defaults: # Shared settings for every system below.
 systems: # One entry per dataset; settings here override defaults.
   - name: synthetic_two_site # Label printed with this run.
     base_dir: . # Data and output folder, relative to this YAML.
-    data_path: titration.csv # Exact CSV to fit; takes priority over wildcard_fmt.
-    wildcard_fmt: titration.csv # CSV pattern used if data_path is removed.
-    out_fmt: output_demo # Output folder inside base_dir.
+    data_path: titration.csv # Exact CSV to fit; takes priority over csv_pattern.
+    csv_pattern: titration.csv # Input CSV glob if data_path is null; * and {t} are allowed.
+    output_folder: output_demo # Results folder inside base_dir; {t} is allowed.
     temperatures: [25] # Run label in degrees C; does not affect titration fitting.

@@ -22,6 +22,6 @@ defaults:
 systems:
   - name: ADP_AmAc_20C
     base_dir: .
-    wildcard_fmt: data/AMAC_20C_*.csv
-    out_fmt: output
+    csv_pattern: data/AMAC_20C_*.csv
+    output_folder: output
     temperatures: [20]

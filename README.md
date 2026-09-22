@@ -20,9 +20,11 @@ In Windows VS Code, open the repository folder, select the `.venv` Python interp
 |---|---|
 | `YAML_FILE` in `run.py` | Repository root |
 | `base_dir`, `data_path`, `deconv_csv_path` in YAML | YAML file's directory |
-| `wildcard_fmt`, `out_fmt` in YAML | Resolved `base_dir` |
+| `csv_pattern`, `output_folder` in YAML | Resolved `base_dir` |
 
 Absolute paths are accepted for `YAML_FILE`, `base_dir`, `data_path`, and `deconv_csv_path`. Use forward slashes in both `run.py` and YAML on Windows, such as `C:/data/titration.csv`; they avoid backslash escapes in quoted strings.
+
+`data_path` selects one exact CSV. If it is unset, `csv_pattern` matches one or more CSVs; `*` is a wildcard, and `{t}` expands from `temperatures`. `output_folder` names the results folder and can also use `{t}`. Existing YAMLs using `wildcard_fmt` and `out_fmt` remain accepted.
 
 The example fits three ADP/AmAc native-MS replicates at 20 °C. Its CSVs, YAML, and preview are together under `examples/adp_amac_20c/`. The command writes per-replicate fit SVGs and fitted-constant CSVs, plus a combined figure with observed replicate error bars, a summary CSV, and an optimizer log under `examples/adp_amac_20c/output/`.
 
@@ -55,7 +57,18 @@ This fits the bundled two-site titration generated with 5 and 20 µM dissociatio
 
 Titration CSVs use `Entry` for total ligand concentration and `I0`, `I1`, etc. for bound-state intensities or fractions. Set ligand units and protein concentration in YAML. Missing intensity cells remain missing; measured zeros remain zero. Inputs accept UTF-8, UTF-8 BOM, UTF-16 BOM, and Windows-1252. Output CSVs use UTF-8 with comma separators and decimal points.
 
-Model families: sequential specific, sequential adduct, competing adduct, stochastic adduct, occupancy decay, and shared-site. Thermodynamic analysis code is included for temperature series. Check fit quality and parameter identifiability before biological interpretation.
+## Models
+
+| Model ID | Binding model | Fitted parameters |
+|---|---|---|
+| `sequential_specific` | Specific binding steps only | One for each specific step |
+| `sequential_adduct` | Stepwise specific binding plus geometric nonspecific adducts | One for each specific step, plus one nonspecific |
+| `competing_adduct` | Specific and constant nonspecific contributions to each apparent step | One for each specific step, plus one nonspecific amplitude |
+| `stochastic_adduct` | Stepwise specific binding plus Poisson weighted nonspecific adducts | One for each specific step, plus one nonspecific |
+| `occupancy_decay` | Stepwise specific binding plus an occupancy-dependent nonspecific contribution | One for each specific step, plus a nonspecific amplitude and shape exponent |
+| `shared_site` | Equivalent specific sites sharing one affinity, plus Poisson weighted nonspecific adducts | One shared specific and one nonspecific |
+
+Thermodynamic analysis code is included for temperature series. Check fit quality and parameter identifiability before biological interpretation.
 
 The shared-site model has $n_{\mathrm{params}}(S)=2$ because it fits one shared specific affinity and one nonspecific affinity. $S$ controls how many equivalent specific sites enter the combinatorial model; it does not create one fitted affinity per site. All models retain the same `n_params` interface so the generic fitter can query them uniformly.
 
